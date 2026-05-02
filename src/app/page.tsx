@@ -22,7 +22,7 @@ import type { CartItem, Category, PaymentMethod, Product } from "@/types/pos";
 import { clsx } from "clsx";
 
 export default function CashierPage() {
-  const { user, displayName } = useAuth();
+  const { user, displayName, tenantId, branchActive } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -36,14 +36,15 @@ export default function CashierPage() {
   const [cartSidebarOpen, setCartSidebarOpen] = useState(true);
 
   useEffect(() => {
-    const unsubscribeProducts = subscribeProducts(setProducts);
-    const unsubscribeCategories = subscribeCategories(setCategories);
+    if (!tenantId) return;
+    const unsubscribeProducts = subscribeProducts(tenantId, setProducts);
+    const unsubscribeCategories = subscribeCategories(tenantId, setCategories);
 
     return () => {
       unsubscribeProducts();
       unsubscribeCategories();
     };
-  }, []);
+  }, [tenantId]);
 
   const filteredProducts = useMemo(() => {
     return products.filter((product) => {
@@ -111,17 +112,22 @@ export default function CashierPage() {
   };
 
   const handleCheckout = async () => {
+    if (!tenantId) {
+      setNotice({ type: "error", message: "Tenant aktif belum dipilih." });
+      return;
+    }
     setIsCheckingOut(true);
     setNotice(null);
 
     try {
-      const invoiceCode = await checkout({
+      const invoiceCode = await checkout(tenantId, {
         cart,
         totalPrice: total,
         paidAmount: effectivePaidAmount,
         paymentMethod,
         userId: user?.uid ?? "demo-admin",
         userName: displayName,
+        branchId: branchActive,
       });
       const successMessage = `Transaksi ${invoiceCode} berhasil disimpan.`;
       setNotice({ type: "success", message: successMessage });
@@ -139,7 +145,7 @@ export default function CashierPage() {
   };
 
   return (
-    <AppShell allowedRoles={["admin", "cashier"]}>
+    <AppShell allowedRoles={["owner", "admin", "cashier"]}>
       <SuccessPopup message={successPopup} onClose={() => setSuccessPopup("")} />
       {!cartSidebarOpen ? (
         <button

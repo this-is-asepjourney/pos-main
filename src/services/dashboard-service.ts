@@ -8,8 +8,11 @@ const isSameDay = (left: Date, right: Date) =>
   left.getMonth() === right.getMonth() &&
   left.getDate() === right.getDate();
 
-export const getDashboardStats = async (): Promise<DashboardStats> => {
-  const [transactions, products] = await Promise.all([getTransactions(100), getProducts()]);
+export const getDashboardStats = async (tenantId: string): Promise<DashboardStats> => {
+  const [transactions, products] = await Promise.all([
+    getTransactions(tenantId, 100),
+    getProducts(tenantId),
+  ]);
   const today = new Date();
   const todayTransactions = transactions.filter((transaction) =>
     isSameDay(toDate(transaction.createdAt), today),

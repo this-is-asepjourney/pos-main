@@ -1,0 +1,12 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.onMemberWritten = exports.onTransactionCreated = exports.syncTenantClaims = exports.setActiveTenant = void 0;
+const app_1 = require("firebase-admin/app");
+(0, app_1.initializeApp)();
+var auth_1 = require("./auth");
+Object.defineProperty(exports, "setActiveTenant", { enumerable: true, get: function () { return auth_1.setActiveTenant; } });
+Object.defineProperty(exports, "syncTenantClaims", { enumerable: true, get: function () { return auth_1.syncTenantClaims; } });
+var aggregators_1 = require("./aggregators");
+Object.defineProperty(exports, "onTransactionCreated", { enumerable: true, get: function () { return aggregators_1.onTransactionCreated; } });
+var members_1 = require("./members");
+Object.defineProperty(exports, "onMemberWritten", { enumerable: true, get: function () { return members_1.onMemberWritten; } });

@@ -5,6 +5,7 @@ import { Boxes, Download, FileSpreadsheet, ImageUp, LoaderCircle, PackagePlus, P
 import { AppShell } from "@/components/app-shell";
 import { ProductImage } from "@/components/product-image";
 import { SuccessPopup } from "@/components/success-popup";
+import { useAuth } from "@/components/app-provider";
 import { isCloudinaryConfigured, uploadImageToCloudinary } from "@/lib/cloudinary";
 import { formatCurrency, formatDateTime } from "@/lib/format";
 import {
@@ -64,6 +65,7 @@ const readNumberCell = (row: ProductImportRow, header: string) => {
 };
 
 export default function ProductsPage() {
+  const { tenantId, branchActive } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [form, setForm] = useState<ProductInput>(emptyForm);
@@ -82,8 +84,9 @@ export default function ProductsPage() {
   const [restocking, setRestocking] = useState(false);
 
   useEffect(() => {
-    const unsubscribeProducts = subscribeProducts(setProducts);
-    const unsubscribeCategories = subscribeCategories((items) => {
+    if (!tenantId) return;
+    const unsubscribeProducts = subscribeProducts(tenantId, setProducts);
+    const unsubscribeCategories = subscribeCategories(tenantId, (items) => {
       setCategories(items);
       setForm((current) =>
         current.categoryId || !items.length
@@ -96,7 +99,7 @@ export default function ProductsPage() {
       unsubscribeProducts();
       unsubscribeCategories();
     };
-  }, []);
+  }, [tenantId]);
 
   useEffect(() => {
     return () => {
@@ -138,6 +141,7 @@ export default function ProductsPage() {
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (!tenantId) return;
     setMessage("");
     setSavingProduct(true);
 
@@ -151,12 +155,12 @@ export default function ProductsPage() {
       };
 
       if (editingId) {
-        await updateProduct(editingId, payload);
+        await updateProduct(tenantId, editingId, payload, branchActive);
         const successMessage = "Produk berhasil diperbarui.";
         setMessage(successMessage);
         setSuccessPopup(successMessage);
       } else {
-        await createProduct(payload);
+        await createProduct(tenantId, payload, branchActive);
         const successMessage = "Produk berhasil ditambahkan.";
         setMessage(successMessage);
         setSuccessPopup(successMessage);
@@ -170,15 +174,15 @@ export default function ProductsPage() {
   };
 
   const handleSubmitCategory = async () => {
-    if (!categoryName.trim()) return;
+    if (!tenantId || !categoryName.trim()) return;
     setMessage("");
 
     try {
       if (editingCategoryId) {
-        await updateCategory(editingCategoryId, categoryName.trim());
+        await updateCategory(tenantId, editingCategoryId, categoryName.trim());
         setMessage("Kategori berhasil diperbarui.");
       } else {
-        await createCategory(categoryName.trim());
+        await createCategory(tenantId, categoryName.trim());
         setMessage("Kategori berhasil ditambahkan.");
       }
       setCategoryName("");
@@ -217,13 +221,13 @@ export default function ProductsPage() {
 
   const handleRestock = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!restockProductId) return;
+    if (!tenantId || !restockProductId) return;
 
     setRestocking(true);
     setMessage("");
 
     try {
-      await restockProduct(restockProductId, restockQty);
+      await restockProduct(tenantId, restockProductId, restockQty, branchActive);
       const product = products.find((item) => item.id === restockProductId);
       const successMessage = `${product?.name ?? "Produk"} berhasil direstock +${Math.floor(restockQty)} stok.`;
       setMessage(successMessage);
@@ -248,7 +252,7 @@ export default function ProductsPage() {
 
   const handleImportProducts = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file) return;
+    if (!file || !tenantId) return;
 
     setMessage("");
     setImportingProducts(true);
@@ -331,7 +335,7 @@ export default function ProductsPage() {
         let category = categoryMap.get(categoryKey);
 
         if (!category) {
-          const categoryRef = await createCategory(item.categoryName);
+          const categoryRef = await createCategory(tenantId, item.categoryName);
           category = {
             id: categoryRef.id,
             name: item.categoryName,
@@ -341,6 +345,7 @@ export default function ProductsPage() {
         }
 
         await importProduct(
+          tenantId,
           {
             name: item.name,
             price: item.price,
@@ -352,6 +357,7 @@ export default function ProductsPage() {
             barcode: item.barcode,
           },
           item.createdAt,
+          branchActive,
         );
       }
 
@@ -602,11 +608,12 @@ export default function ProductsPage() {
                   </button>
                   <button
                     type="button"
-                    onClick={() =>
-                      deleteCategory(category.id).catch((error) =>
+                    onClick={() => {
+                      if (!tenantId) return;
+                      deleteCategory(tenantId, category.id).catch((error) =>
                         setMessage(error instanceof Error ? error.message : "Kategori gagal dihapus."),
-                      )
-                    }
+                      );
+                    }}
                     className="rounded-full p-1 text-rose-600 hover:bg-rose-100"
                     aria-label={`Hapus kategori ${category.name}`}
                   >
@@ -682,11 +689,12 @@ export default function ProductsPage() {
                   </button>
                   <button
                     type="button"
-                    onClick={() =>
-                      deleteProduct(product.id).catch((error) =>
+                    onClick={() => {
+                      if (!tenantId) return;
+                      deleteProduct(tenantId, product.id).catch((error) =>
                         setMessage(error instanceof Error ? error.message : "Produk gagal dihapus."),
-                      )
-                    }
+                      );
+                    }}
                     className="rounded-xl bg-rose-100 px-3 py-2 font-bold text-rose-700"
                   >
                     <Trash2 size={15} />
@@ -778,7 +786,10 @@ export default function ProductsPage() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => deleteProduct(product.id).catch((error) => setMessage(error.message))}
+                        onClick={() => {
+                          if (!tenantId) return;
+                          deleteProduct(tenantId, product.id).catch((error) => setMessage(error.message));
+                        }}
                         className="ml-2 rounded-xl bg-rose-50 px-3 py-2 font-bold text-rose-700"
                       >
                         <Trash2 size={15} />

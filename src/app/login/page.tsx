@@ -16,7 +16,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (!isConfigured || authLoading || !user) return;
-    router.push(role === "admin" ? "/dashboard" : "/");
+    router.push(role === "cashier" ? "/" : "/dashboard");
   }, [authLoading, isConfigured, role, router, user]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {

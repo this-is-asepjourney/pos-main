@@ -27,7 +27,8 @@ const formatShiftDuration = (shift: ShiftAttendance) => {
 };
 
 export default function AttendancePage() {
-  const { user, displayName, role } = useAuth();
+  const { user, displayName, role, tenantId, branchActive } = useAuth();
+  const isManager = role === "admin" || role === "owner";
   const [myShift, setMyShift] = useState<ShiftAttendance | null>(null);
   const [activeShifts, setActiveShifts] = useState<ShiftAttendance[]>([]);
   const [attendanceHistory, setAttendanceHistory] = useState<ShiftAttendance[]>([]);
@@ -35,36 +36,34 @@ export default function AttendancePage() {
   const [processing, setProcessing] = useState(false);
 
   useEffect(() => {
-    if (!user?.uid) return () => undefined;
-    return subscribeMyActiveShift(user.uid, setMyShift);
-  }, [user?.uid]);
+    if (!tenantId || !user?.uid) return () => undefined;
+    return subscribeMyActiveShift(tenantId, user.uid, setMyShift);
+  }, [tenantId, user?.uid]);
 
   useEffect(() => {
-    if (role !== "admin") {
+    if (!tenantId || !isManager) {
       return () => undefined;
     }
-
-    return subscribeActiveShifts(setActiveShifts);
-  }, [role]);
+    return subscribeActiveShifts(tenantId, setActiveShifts);
+  }, [isManager, tenantId]);
 
   useEffect(() => {
-    if (role !== "admin") {
+    if (!tenantId || !isManager) {
       return () => undefined;
     }
+    return subscribeAttendanceHistory(tenantId, setAttendanceHistory, 150);
+  }, [isManager, tenantId]);
 
-    return subscribeAttendanceHistory(setAttendanceHistory, 150);
-  }, [role]);
-
-  const displayedActiveShifts = role === "admin" ? activeShifts : myShift ? [myShift] : [];
+  const displayedActiveShifts = isManager ? activeShifts : myShift ? [myShift] : [];
 
   const handleStartShift = async () => {
-    if (!user?.uid) return;
+    if (!tenantId || !user?.uid) return;
 
     setProcessing(true);
     setMessage("");
 
     try {
-      await startShift(user.uid, displayName, role);
+      await startShift(tenantId, user.uid, displayName, role, branchActive);
       setMessage("Shift berhasil dimulai.");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Gagal memulai shift.");
@@ -74,13 +73,13 @@ export default function AttendancePage() {
   };
 
   const handleEndShift = async () => {
-    if (!myShift) return;
+    if (!tenantId || !myShift) return;
 
     setProcessing(true);
     setMessage("");
 
     try {
-      await endShift(myShift.id);
+      await endShift(tenantId, myShift.id);
       setMessage("Shift berhasil diakhiri.");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Gagal mengakhiri shift.");
@@ -90,7 +89,7 @@ export default function AttendancePage() {
   };
 
   return (
-    <AppShell allowedRoles={["admin", "cashier"]}>
+    <AppShell allowedRoles={["owner", "admin", "cashier"]}>
       <div className="grid gap-6 p-4 xl:grid-cols-[420px_1fr] xl:p-6">
         <section className="space-y-5">
           <header className="rounded-[2rem] bg-slate-950 p-6 text-white shadow-xl">
@@ -205,7 +204,7 @@ export default function AttendancePage() {
             </div>
           </div>
 
-          {role === "admin" ? (
+          {isManager ? (
             <div className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm">
             <div className="flex items-center justify-between gap-3">
               <div>

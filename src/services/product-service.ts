@@ -1,8 +1,6 @@
 import {
   addDoc,
-  collection,
   deleteDoc,
-  doc,
   getDocs,
   increment,
   onSnapshot,
@@ -12,24 +10,82 @@ import {
   updateDoc,
   type Unsubscribe,
 } from "firebase/firestore";
-import { db, isFirebaseConfigured } from "@/lib/firebase";
+import { isFirebaseConfigured } from "@/lib/firebase";
 import { demoCategories, demoProducts } from "@/lib/demo-data";
+import {
+  categoriesCol,
+  categoryDoc,
+  DEFAULT_BRANCH_ID,
+  isDemoTenant,
+  productDoc,
+  productsCol,
+} from "@/lib/tenant";
 import type { Category, Product, ProductInput } from "@/types/pos";
 
-const productCollection = collection(db, "products");
-const categoryCollection = collection(db, "categories");
+const expandProduct = (raw: Record<string, unknown>, id: string): Product => {
+  const stockByBranch = (raw.stockByBranch as Record<string, number> | undefined) ?? {};
+  const fallbackStock = Number(raw.stock ?? 0);
+  const totalStock = Number(
+    raw.totalStock ??
+      Object.values(stockByBranch).reduce((sum, value) => sum + Number(value || 0), 0) ??
+      fallbackStock,
+  );
 
-export const subscribeProducts = (callback: (products: Product[]) => void): Unsubscribe => {
-  if (!isFirebaseConfigured) {
+  return {
+    id,
+    name: String(raw.name ?? ""),
+    nameLower: typeof raw.nameLower === "string" ? raw.nameLower : undefined,
+    price: Number(raw.price ?? 0),
+    stock: totalStock || fallbackStock,
+    categoryId: String(raw.categoryId ?? ""),
+    categoryName: String(raw.categoryName ?? ""),
+    imageUrl: typeof raw.imageUrl === "string" ? raw.imageUrl : undefined,
+    sku: typeof raw.sku === "string" ? raw.sku : undefined,
+    barcode: typeof raw.barcode === "string" ? raw.barcode : undefined,
+    isActive: typeof raw.isActive === "boolean" ? raw.isActive : true,
+    stockByBranch,
+    totalStock: totalStock || fallbackStock,
+    createdAt: (raw.createdAt as Product["createdAt"]) ?? null,
+    updatedAt: (raw.updatedAt as Product["updatedAt"]) ?? null,
+  };
+};
+
+const buildProductPayload = (
+  payload: ProductInput,
+  branchId: string,
+): Record<string, unknown> => {
+  const stock = Math.max(0, Math.floor(Number(payload.stock) || 0));
+  return {
+    name: payload.name,
+    nameLower: payload.name.toLowerCase(),
+    price: Number(payload.price) || 0,
+    categoryId: payload.categoryId,
+    categoryName: payload.categoryName,
+    imageUrl: payload.imageUrl ?? "",
+    sku: payload.sku ?? "",
+    barcode: payload.barcode ?? "",
+    isActive: true,
+    stockByBranch: { [branchId]: stock },
+    totalStock: stock,
+  };
+};
+
+export const subscribeProducts = (
+  tenantId: string,
+  callback: (products: Product[]) => void,
+): Unsubscribe => {
+  if (!isFirebaseConfigured || isDemoTenant(tenantId)) {
     callback(demoProducts);
     return () => undefined;
   }
 
-  const productsQuery = query(productCollection, orderBy("name", "asc"));
+  const productsQuery = query(productsCol(tenantId), orderBy("name", "asc"));
   return onSnapshot(
     productsQuery,
     (snapshot) => {
-      callback(snapshot.docs.map((document) => ({ id: document.id, ...document.data() }) as Product));
+      callback(
+        snapshot.docs.map((document) => expandProduct(document.data(), document.id)),
+      );
     },
     (error) => {
       console.warn("Gagal memuat produk:", error.message);
@@ -38,17 +94,24 @@ export const subscribeProducts = (callback: (products: Product[]) => void): Unsu
   );
 };
 
-export const subscribeCategories = (callback: (categories: Category[]) => void): Unsubscribe => {
-  if (!isFirebaseConfigured) {
+export const subscribeCategories = (
+  tenantId: string,
+  callback: (categories: Category[]) => void,
+): Unsubscribe => {
+  if (!isFirebaseConfigured || isDemoTenant(tenantId)) {
     callback(demoCategories);
     return () => undefined;
   }
 
-  const categoriesQuery = query(categoryCollection, orderBy("name", "asc"));
+  const categoriesQuery = query(categoriesCol(tenantId), orderBy("name", "asc"));
   return onSnapshot(
     categoriesQuery,
     (snapshot) => {
-      callback(snapshot.docs.map((document) => ({ id: document.id, ...document.data() }) as Category));
+      callback(
+        snapshot.docs.map(
+          (document) => ({ id: document.id, ...document.data() }) as Category,
+        ),
+      );
     },
     (error) => {
       console.warn("Gagal memuat kategori:", error.message);
@@ -57,57 +120,78 @@ export const subscribeCategories = (callback: (categories: Category[]) => void):
   );
 };
 
-export const getProducts = async (): Promise<Product[]> => {
-  if (!isFirebaseConfigured) return demoProducts;
+export const getProducts = async (tenantId: string): Promise<Product[]> => {
+  if (!isFirebaseConfigured || isDemoTenant(tenantId)) return demoProducts;
 
-  const snapshot = await getDocs(query(productCollection, orderBy("name", "asc")));
-  return snapshot.docs.map((document) => ({ id: document.id, ...document.data() }) as Product);
+  const snapshot = await getDocs(query(productsCol(tenantId), orderBy("name", "asc")));
+  return snapshot.docs.map((document) => expandProduct(document.data(), document.id));
 };
 
-export const getCategories = async (): Promise<Category[]> => {
-  if (!isFirebaseConfigured) return demoCategories;
+export const getCategories = async (tenantId: string): Promise<Category[]> => {
+  if (!isFirebaseConfigured || isDemoTenant(tenantId)) return demoCategories;
 
-  const snapshot = await getDocs(query(categoryCollection, orderBy("name", "asc")));
-  return snapshot.docs.map((document) => ({ id: document.id, ...document.data() }) as Category);
+  const snapshot = await getDocs(query(categoriesCol(tenantId), orderBy("name", "asc")));
+  return snapshot.docs.map(
+    (document) => ({ id: document.id, ...document.data() }) as Category,
+  );
 };
 
-export const createProduct = async (payload: ProductInput) => {
-  if (!isFirebaseConfigured) {
+export const createProduct = async (
+  tenantId: string,
+  payload: ProductInput,
+  branchId: string = DEFAULT_BRANCH_ID,
+) => {
+  if (!isFirebaseConfigured || isDemoTenant(tenantId)) {
     throw new Error("Firebase belum dikonfigurasi. Isi .env.local untuk menyimpan produk.");
   }
 
-  return addDoc(productCollection, {
-    ...payload,
+  return addDoc(productsCol(tenantId), {
+    ...buildProductPayload(payload, branchId),
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
 };
 
-export const importProduct = async (payload: ProductInput, createdAt?: Date) => {
-  if (!isFirebaseConfigured) {
+export const importProduct = async (
+  tenantId: string,
+  payload: ProductInput,
+  createdAt?: Date,
+  branchId: string = DEFAULT_BRANCH_ID,
+) => {
+  if (!isFirebaseConfigured || isDemoTenant(tenantId)) {
     throw new Error("Firebase belum dikonfigurasi. Isi .env.local untuk import produk.");
   }
 
-  return addDoc(productCollection, {
-    ...payload,
+  return addDoc(productsCol(tenantId), {
+    ...buildProductPayload(payload, branchId),
     createdAt: createdAt ?? serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
 };
 
-export const updateProduct = async (productId: string, payload: ProductInput) => {
-  if (!isFirebaseConfigured) {
+export const updateProduct = async (
+  tenantId: string,
+  productId: string,
+  payload: ProductInput,
+  branchId: string = DEFAULT_BRANCH_ID,
+) => {
+  if (!isFirebaseConfigured || isDemoTenant(tenantId)) {
     throw new Error("Firebase belum dikonfigurasi. Isi .env.local untuk mengubah produk.");
   }
 
-  return updateDoc(doc(db, "products", productId), {
-    ...payload,
+  return updateDoc(productDoc(tenantId, productId), {
+    ...buildProductPayload(payload, branchId),
     updatedAt: serverTimestamp(),
   });
 };
 
-export const restockProduct = async (productId: string, qty: number) => {
-  if (!isFirebaseConfigured) {
+export const restockProduct = async (
+  tenantId: string,
+  productId: string,
+  qty: number,
+  branchId: string = DEFAULT_BRANCH_ID,
+) => {
+  if (!isFirebaseConfigured || isDemoTenant(tenantId)) {
     throw new Error("Firebase belum dikonfigurasi. Isi .env.local untuk restock produk.");
   }
 
@@ -115,47 +199,53 @@ export const restockProduct = async (productId: string, qty: number) => {
     throw new Error("Jumlah restock harus lebih dari 0.");
   }
 
-  return updateDoc(doc(db, "products", productId), {
-    stock: increment(Math.floor(qty)),
+  const delta = Math.floor(qty);
+  return updateDoc(productDoc(tenantId, productId), {
+    [`stockByBranch.${branchId}`]: increment(delta),
+    totalStock: increment(delta),
     updatedAt: serverTimestamp(),
   });
 };
 
-export const deleteProduct = async (productId: string) => {
-  if (!isFirebaseConfigured) {
+export const deleteProduct = async (tenantId: string, productId: string) => {
+  if (!isFirebaseConfigured || isDemoTenant(tenantId)) {
     throw new Error("Firebase belum dikonfigurasi. Isi .env.local untuk menghapus produk.");
   }
 
-  return deleteDoc(doc(db, "products", productId));
+  return deleteDoc(productDoc(tenantId, productId));
 };
 
-export const createCategory = async (name: string) => {
-  if (!isFirebaseConfigured) {
+export const createCategory = async (tenantId: string, name: string) => {
+  if (!isFirebaseConfigured || isDemoTenant(tenantId)) {
     throw new Error("Firebase belum dikonfigurasi. Isi .env.local untuk menyimpan kategori.");
   }
 
-  return addDoc(categoryCollection, {
+  return addDoc(categoriesCol(tenantId), {
     name,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
 };
 
-export const updateCategory = async (categoryId: string, name: string) => {
-  if (!isFirebaseConfigured) {
+export const updateCategory = async (
+  tenantId: string,
+  categoryId: string,
+  name: string,
+) => {
+  if (!isFirebaseConfigured || isDemoTenant(tenantId)) {
     throw new Error("Firebase belum dikonfigurasi. Isi .env.local untuk mengubah kategori.");
   }
 
-  return updateDoc(doc(db, "categories", categoryId), {
+  return updateDoc(categoryDoc(tenantId, categoryId), {
     name,
     updatedAt: serverTimestamp(),
   });
 };
 
-export const deleteCategory = async (categoryId: string) => {
-  if (!isFirebaseConfigured) {
+export const deleteCategory = async (tenantId: string, categoryId: string) => {
+  if (!isFirebaseConfigured || isDemoTenant(tenantId)) {
     throw new Error("Firebase belum dikonfigurasi. Isi .env.local untuk menghapus kategori.");
   }
 
-  return deleteDoc(doc(db, "categories", categoryId));
+  return deleteDoc(categoryDoc(tenantId, categoryId));
 };

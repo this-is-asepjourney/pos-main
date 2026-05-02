@@ -2,29 +2,49 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { BarChart3, Boxes, Clock3, LogOut, ReceiptText, ShoppingCart } from "lucide-react";
+import {
+  BarChart3,
+  Boxes,
+  Building2,
+  Clock3,
+  LogOut,
+  ReceiptText,
+  ShoppingCart,
+} from "lucide-react";
 import { useAuth } from "@/components/app-provider";
 import { BrandMark } from "@/components/brand-mark";
 import { clsx } from "clsx";
-import type { UserRole } from "@/types/pos";
+import type { TenantRole } from "@/types/pos";
+
+const ALL_ROLES: TenantRole[] = ["owner", "admin", "cashier"];
+const MANAGER_ROLES: TenantRole[] = ["owner", "admin"];
 
 const navItems = [
-  { href: "/", label: "Kasir", icon: ShoppingCart, roles: ["admin", "cashier"] as UserRole[] },
-  { href: "/attendance", label: "Absensi", icon: Clock3, roles: ["admin", "cashier"] as UserRole[] },
-  { href: "/dashboard", label: "Dashboard", icon: BarChart3, roles: ["admin"] as UserRole[] },
-  { href: "/products", label: "Produk", icon: Boxes, roles: ["admin"] as UserRole[] },
-  { href: "/transactions", label: "Transaksi", icon: ReceiptText, roles: ["admin"] as UserRole[] },
+  { href: "/", label: "Kasir", icon: ShoppingCart, roles: ALL_ROLES },
+  { href: "/attendance", label: "Absensi", icon: Clock3, roles: ALL_ROLES },
+  { href: "/dashboard", label: "Dashboard", icon: BarChart3, roles: MANAGER_ROLES },
+  { href: "/products", label: "Produk", icon: Boxes, roles: MANAGER_ROLES },
+  { href: "/transactions", label: "Transaksi", icon: ReceiptText, roles: MANAGER_ROLES },
 ];
 
 export function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
-  const { displayName, isConfigured, logout, role } = useAuth();
+  const {
+    displayName,
+    isConfigured,
+    logout,
+    role,
+    tenantId,
+    memberships,
+  } = useAuth();
 
   const handleLogout = async () => {
     await logout();
     router.push("/login");
   };
+
+  const activeMembership = memberships.find((m) => m.tenantId === tenantId);
 
   return (
     <aside className="flex w-full flex-col gap-6 border-b border-white/10 bg-slate-950 px-4 py-4 text-white lg:min-h-screen lg:w-72 lg:border-b-0 lg:border-r lg:px-5">
@@ -39,28 +59,45 @@ export function Navbar() {
         ) : null}
       </div>
 
+      {tenantId ? (
+        <Link
+          href="/select-tenant"
+          className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-3 py-3 text-sm font-bold text-white transition hover:bg-white/10"
+        >
+          <Building2 size={18} className="text-cyan-300" />
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-[11px] uppercase tracking-[0.16em] text-slate-400">
+              Toko aktif
+            </p>
+            <p className="truncate font-black text-white">
+              {activeMembership?.tenantName ?? tenantId}
+            </p>
+          </div>
+        </Link>
+      ) : null}
+
       <nav className="flex gap-2 overflow-x-auto lg:flex-col lg:overflow-visible">
         {navItems
           .filter((item) => item.roles.includes(role))
           .map((item) => {
-          const Icon = item.icon;
-          const active = pathname === item.href;
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={clsx(
-                "flex min-w-max items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold transition",
-                active
-                  ? "bg-white text-slate-950 shadow-lg shadow-black/20"
-                  : "text-slate-300 hover:bg-white/10 hover:text-white",
-              )}
-            >
-              <Icon size={18} />
-              {item.label}
-            </Link>
-          );
-        })}
+            const Icon = item.icon;
+            const active = pathname === item.href;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={clsx(
+                  "flex min-w-max items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold transition",
+                  active
+                    ? "bg-white text-slate-950 shadow-lg shadow-black/20"
+                    : "text-slate-300 hover:bg-white/10 hover:text-white",
+                )}
+              >
+                <Icon size={18} />
+                {item.label}
+              </Link>
+            );
+          })}
       </nav>
 
       <div className="rounded-2xl border border-white/10 bg-white/5 p-3 lg:hidden">

@@ -1,5 +1,4 @@
 import {
-  collection,
   doc,
   getDoc,
   getDocs,
@@ -11,13 +10,43 @@ import {
   runTransaction,
   serverTimestamp,
   updateDoc,
+  where,
   type Unsubscribe,
 } from "firebase/firestore";
 import { db, isFirebaseConfigured } from "@/lib/firebase";
 import { demoTransactions } from "@/lib/demo-data";
-import type { CheckoutPayload, PosTransaction, TransactionUpdateInput } from "@/types/pos";
+import {
+  buildDateKey,
+  buildMonthKey,
+  DEFAULT_BRANCH_ID,
+  isDemoTenant,
+  productDoc,
+  transactionDoc,
+  transactionsCol,
+} from "@/lib/tenant";
+import type {
+  CheckoutPayload,
+  PosTransaction,
+  TransactionUpdateInput,
+} from "@/types/pos";
 
-const transactionCollection = collection(db, "transactions");
+const expandTransaction = (raw: Record<string, unknown>, id: string): PosTransaction => ({
+  id,
+  invoiceCode: String(raw.invoiceCode ?? ""),
+  branchId: String(raw.branchId ?? DEFAULT_BRANCH_ID),
+  userId: String(raw.userId ?? raw.cashierId ?? ""),
+  userName: String(raw.userName ?? raw.cashierName ?? ""),
+  totalPrice: Number(raw.totalPrice ?? 0),
+  paidAmount: Number(raw.paidAmount ?? 0),
+  changeAmount: Number(raw.changeAmount ?? 0),
+  paymentMethod: (raw.paymentMethod as PosTransaction["paymentMethod"]) ?? "cash",
+  status: (raw.status as PosTransaction["status"]) ?? "completed",
+  items: Array.isArray(raw.items) ? (raw.items as PosTransaction["items"]) : [],
+  dateKey: typeof raw.dateKey === "string" ? raw.dateKey : undefined,
+  monthKey: typeof raw.monthKey === "string" ? raw.monthKey : undefined,
+  createdAt: (raw.createdAt as PosTransaction["createdAt"]) ?? null,
+  updatedAt: (raw.updatedAt as PosTransaction["updatedAt"]) ?? null,
+});
 
 const generateInvoiceCode = () => {
   const date = new Date();
@@ -26,26 +55,34 @@ const generateInvoiceCode = () => {
 };
 
 export const subscribeTransactions = (
+  tenantId: string,
   callback: (transactions: PosTransaction[]) => void,
-  maxItems = 50,
+  options?: { maxItems?: number; branchId?: string; cashierId?: string },
 ): Unsubscribe => {
-  if (!isFirebaseConfigured) {
+  if (!isFirebaseConfigured || isDemoTenant(tenantId)) {
     callback(demoTransactions);
     return () => undefined;
   }
 
+  const filters = [];
+  if (options?.branchId && options.branchId !== "*") {
+    filters.push(where("branchId", "==", options.branchId));
+  }
+  if (options?.cashierId) {
+    filters.push(where("userId", "==", options.cashierId));
+  }
+
   const transactionsQuery = query(
-    transactionCollection,
+    transactionsCol(tenantId),
+    ...filters,
     orderBy("createdAt", "desc"),
-    limit(maxItems),
+    limit(options?.maxItems ?? 50),
   );
 
   return onSnapshot(
     transactionsQuery,
     (snapshot) => {
-      callback(
-        snapshot.docs.map((document) => ({ id: document.id, ...document.data() }) as PosTransaction),
-      );
+      callback(snapshot.docs.map((document) => expandTransaction(document.data(), document.id)));
     },
     (error) => {
       console.warn("Gagal memuat transaksi:", error.message);
@@ -54,16 +91,26 @@ export const subscribeTransactions = (
   );
 };
 
-export const getTransactions = async (maxItems = 100): Promise<PosTransaction[]> => {
-  if (!isFirebaseConfigured) return demoTransactions;
+export const getTransactions = async (
+  tenantId: string,
+  maxItems = 100,
+): Promise<PosTransaction[]> => {
+  if (!isFirebaseConfigured || isDemoTenant(tenantId)) return demoTransactions;
 
-  const snapshot = await getDocs(query(transactionCollection, orderBy("createdAt", "desc"), limit(maxItems)));
-  return snapshot.docs.map((document) => ({ id: document.id, ...document.data() }) as PosTransaction);
+  const snapshot = await getDocs(
+    query(transactionsCol(tenantId), orderBy("createdAt", "desc"), limit(maxItems)),
+  );
+  return snapshot.docs.map((document) => expandTransaction(document.data(), document.id));
 };
 
-export const checkout = async (payload: CheckoutPayload): Promise<string> => {
+export const checkout = async (
+  tenantId: string,
+  payload: CheckoutPayload,
+): Promise<string> => {
   if (!payload.cart.length) throw new Error("Keranjang masih kosong.");
-  if (payload.paidAmount < payload.totalPrice) throw new Error("Nominal bayar kurang dari total belanja.");
+  if (payload.paidAmount < payload.totalPrice) {
+    throw new Error("Nominal bayar kurang dari total belanja.");
+  }
 
   for (const item of payload.cart) {
     if (item.qty > item.stock) {
@@ -71,47 +118,54 @@ export const checkout = async (payload: CheckoutPayload): Promise<string> => {
     }
   }
 
-  if (!isFirebaseConfigured) {
+  if (!isFirebaseConfigured || isDemoTenant(tenantId)) {
     return generateInvoiceCode();
   }
 
   const invoiceCode = generateInvoiceCode();
-  const transactionRef = doc(transactionCollection);
+  const transactionRef = doc(transactionsCol(tenantId));
+  const branchId = payload.branchId || DEFAULT_BRANCH_ID;
+  const now = new Date();
 
   await runTransaction(db, async (firestoreTransaction) => {
-    const productRefs = payload.cart.map((item) => doc(db, "products", item.productId));
+    const productRefs = payload.cart.map((item) => productDoc(tenantId, item.productId));
     const productSnapshots = await Promise.all(
       productRefs.map((productRef) => firestoreTransaction.get(productRef)),
     );
 
     payload.cart.forEach((item, index) => {
       const productSnapshot = productSnapshots[index];
-
       if (!productSnapshot.exists()) {
         throw new Error(`Produk ${item.name} tidak ditemukan.`);
       }
-
-      const currentStock = Number(productSnapshot.data().stock ?? 0);
-      if (currentStock < item.qty) {
-        throw new Error(`Stok ${item.name} tersisa ${currentStock}.`);
+      const data = productSnapshot.data();
+      const stockMap = (data?.stockByBranch as Record<string, number> | undefined) ?? {};
+      const branchStock = Number(
+        stockMap[branchId] ?? data?.totalStock ?? data?.stock ?? 0,
+      );
+      if (branchStock < item.qty) {
+        throw new Error(`Stok ${item.name} tersisa ${branchStock}.`);
       }
     });
 
     payload.cart.forEach((item, index) => {
       firestoreTransaction.update(productRefs[index], {
-        stock: increment(-item.qty),
+        [`stockByBranch.${branchId}`]: increment(-item.qty),
+        totalStock: increment(-item.qty),
         updatedAt: serverTimestamp(),
       });
     });
 
     firestoreTransaction.set(transactionRef, {
       invoiceCode,
+      branchId,
       userId: payload.userId,
       userName: payload.userName,
       totalPrice: payload.totalPrice,
       paidAmount: payload.paidAmount,
       changeAmount: payload.paidAmount - payload.totalPrice,
       paymentMethod: payload.paymentMethod,
+      status: "completed",
       items: payload.cart.map((item) => ({
         productId: item.productId,
         name: item.name,
@@ -119,6 +173,8 @@ export const checkout = async (payload: CheckoutPayload): Promise<string> => {
         qty: item.qty,
         subtotal: item.subtotal,
       })),
+      dateKey: buildDateKey(now),
+      monthKey: buildMonthKey(now),
       createdAt: serverTimestamp(),
     });
   });
@@ -127,14 +183,15 @@ export const checkout = async (payload: CheckoutPayload): Promise<string> => {
 };
 
 export const updateTransaction = async (
+  tenantId: string,
   transactionId: string,
   payload: TransactionUpdateInput,
 ) => {
-  if (!isFirebaseConfigured) {
+  if (!isFirebaseConfigured || isDemoTenant(tenantId)) {
     throw new Error("Firebase belum dikonfigurasi. Isi .env.local untuk mengubah transaksi.");
   }
 
-  const transactionRef = doc(db, "transactions", transactionId);
+  const transactionRef = transactionDoc(tenantId, transactionId);
   const transactionSnapshot = await getDoc(transactionRef);
 
   if (!transactionSnapshot.exists()) {

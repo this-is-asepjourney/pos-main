@@ -5,18 +5,21 @@ import { Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, Too
 import { PackageOpen, ReceiptText, TrendingUp, WalletCards } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { StatCard } from "@/components/stat-card";
+import { useAuth } from "@/components/app-provider";
 import { formatCurrency, formatDateTime, formatShortDate } from "@/lib/format";
 import { getDashboardStats } from "@/services/dashboard-service";
 import type { DashboardStats } from "@/types/pos";
 
 export default function DashboardPage() {
+  const { tenantId } = useAuth();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     queueMicrotask(() => setMounted(true));
-    getDashboardStats().then(setStats);
-  }, []);
+    if (!tenantId) return;
+    getDashboardStats(tenantId).then(setStats);
+  }, [tenantId]);
 
   const revenueData =
     stats?.recentTransactions

@@ -1,7 +1,5 @@
 import {
   addDoc,
-  collection,
-  doc,
   getDocs,
   limit,
   onSnapshot,
@@ -12,24 +10,37 @@ import {
   where,
   type Unsubscribe,
 } from "firebase/firestore";
-import { db, isFirebaseConfigured } from "@/lib/firebase";
-import type { ShiftAttendance, UserRole } from "@/types/pos";
-
-const attendanceCollection = collection(db, "attendance");
+import { isFirebaseConfigured } from "@/lib/firebase";
+import {
+  attendanceCol,
+  attendanceDoc,
+  DEFAULT_BRANCH_ID,
+  isDemoTenant,
+} from "@/lib/tenant";
+import type { ShiftAttendance, TenantRole } from "@/types/pos";
 
 export const subscribeActiveShifts = (
+  tenantId: string,
   callback: (shifts: ShiftAttendance[]) => void,
 ): Unsubscribe => {
-  if (!isFirebaseConfigured) {
+  if (!isFirebaseConfigured || isDemoTenant(tenantId)) {
     callback([]);
     return () => undefined;
   }
 
-  const activeQuery = query(attendanceCollection, where("status", "==", "active"), limit(50));
+  const activeQuery = query(
+    attendanceCol(tenantId),
+    where("status", "==", "active"),
+    limit(50),
+  );
   return onSnapshot(
     activeQuery,
     (snapshot) => {
-      callback(snapshot.docs.map((document) => ({ id: document.id, ...document.data() }) as ShiftAttendance));
+      callback(
+        snapshot.docs.map(
+          (document) => ({ id: document.id, ...document.data() }) as ShiftAttendance,
+        ),
+      );
     },
     (error) => {
       console.warn("Gagal memuat absensi aktif:", error.message);
@@ -39,16 +50,17 @@ export const subscribeActiveShifts = (
 };
 
 export const subscribeMyActiveShift = (
+  tenantId: string,
   userId: string,
   callback: (shift: ShiftAttendance | null) => void,
 ): Unsubscribe => {
-  if (!isFirebaseConfigured || !userId) {
+  if (!isFirebaseConfigured || isDemoTenant(tenantId) || !userId) {
     callback(null);
     return () => undefined;
   }
 
   const myShiftQuery = query(
-    attendanceCollection,
+    attendanceCol(tenantId),
     where("userId", "==", userId),
     where("status", "==", "active"),
     limit(1),
@@ -58,7 +70,11 @@ export const subscribeMyActiveShift = (
     myShiftQuery,
     (snapshot) => {
       const document = snapshot.docs[0];
-      callback(document ? ({ id: document.id, ...document.data() } as ShiftAttendance) : null);
+      callback(
+        document
+          ? ({ id: document.id, ...document.data() } as ShiftAttendance)
+          : null,
+      );
     },
     (error) => {
       console.warn("Gagal memuat shift saya:", error.message);
@@ -68,19 +84,28 @@ export const subscribeMyActiveShift = (
 };
 
 export const subscribeAttendanceHistory = (
+  tenantId: string,
   callback: (shifts: ShiftAttendance[]) => void,
   maxItems = 100,
 ): Unsubscribe => {
-  if (!isFirebaseConfigured) {
+  if (!isFirebaseConfigured || isDemoTenant(tenantId)) {
     callback([]);
     return () => undefined;
   }
 
-  const historyQuery = query(attendanceCollection, orderBy("startedAt", "desc"), limit(maxItems));
+  const historyQuery = query(
+    attendanceCol(tenantId),
+    orderBy("startedAt", "desc"),
+    limit(maxItems),
+  );
   return onSnapshot(
     historyQuery,
     (snapshot) => {
-      callback(snapshot.docs.map((document) => ({ id: document.id, ...document.data() }) as ShiftAttendance));
+      callback(
+        snapshot.docs.map(
+          (document) => ({ id: document.id, ...document.data() }) as ShiftAttendance,
+        ),
+      );
     },
     (error) => {
       console.warn("Gagal memuat riwayat absensi:", error.message);
@@ -89,11 +114,17 @@ export const subscribeAttendanceHistory = (
   );
 };
 
-export const startShift = async (userId: string, userName: string, role: UserRole) => {
-  if (!isFirebaseConfigured) return "demo-shift";
+export const startShift = async (
+  tenantId: string,
+  userId: string,
+  userName: string,
+  role: TenantRole,
+  branchId: string = DEFAULT_BRANCH_ID,
+) => {
+  if (!isFirebaseConfigured || isDemoTenant(tenantId)) return "demo-shift";
 
   const activeQuery = query(
-    attendanceCollection,
+    attendanceCol(tenantId),
     where("userId", "==", userId),
     where("status", "==", "active"),
     limit(1),
@@ -104,10 +135,11 @@ export const startShift = async (userId: string, userName: string, role: UserRol
     throw new Error("Shift kamu masih aktif. Akhiri shift sebelum mulai lagi.");
   }
 
-  const shiftRef = await addDoc(attendanceCollection, {
+  const shiftRef = await addDoc(attendanceCol(tenantId), {
     userId,
     userName,
     role,
+    branchId,
     status: "active",
     startedAt: serverTimestamp(),
   });
@@ -115,10 +147,10 @@ export const startShift = async (userId: string, userName: string, role: UserRol
   return shiftRef.id;
 };
 
-export const endShift = async (shiftId: string) => {
-  if (!isFirebaseConfigured) return;
+export const endShift = async (tenantId: string, shiftId: string) => {
+  if (!isFirebaseConfigured || isDemoTenant(tenantId)) return;
 
-  await updateDoc(doc(db, "attendance", shiftId), {
+  await updateDoc(attendanceDoc(tenantId, shiftId), {
     status: "closed",
     endedAt: serverTimestamp(),
   });

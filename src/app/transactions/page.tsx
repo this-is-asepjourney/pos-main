@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { CalendarDays, Download, PencilLine, ReceiptText, Save, Search, X } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
+import { useAuth } from "@/components/app-provider";
 import { formatCurrency, formatDateTime, toDate } from "@/lib/format";
 import { subscribeTransactions, updateTransaction } from "@/services/transaction-service";
 import type { PaymentMethod, PosTransaction, TransactionUpdateInput } from "@/types/pos";
@@ -14,6 +15,7 @@ const paymentMethods: Array<{ value: PaymentMethod; label: string }> = [
 ];
 
 export default function TransactionsPage() {
+  const { tenantId } = useAuth();
   const [transactions, setTransactions] = useState<PosTransaction[]>([]);
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -25,7 +27,10 @@ export default function TransactionsPage() {
     paymentMethod: "cash",
   });
 
-  useEffect(() => subscribeTransactions(setTransactions, 100), []);
+  useEffect(() => {
+    if (!tenantId) return;
+    return subscribeTransactions(tenantId, setTransactions, { maxItems: 100 });
+  }, [tenantId]);
 
   const filteredTransactions = useMemo(
     () =>
@@ -64,13 +69,13 @@ export default function TransactionsPage() {
 
   const handleUpdateTransaction = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!activeTransaction) return;
+    if (!tenantId || !activeTransaction) return;
 
     setSaving(true);
     setMessage("");
 
     try {
-      await updateTransaction(activeTransaction.id, editForm);
+      await updateTransaction(tenantId, activeTransaction.id, editForm);
       setMessage("Transaksi berhasil diperbarui.");
       setEditing(false);
     } catch (error) {
