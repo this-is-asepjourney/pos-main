@@ -10,6 +10,15 @@ service cloud.firestore {
       return signedIn() &&
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "admin";
     }
+
+    function isCashier() {
+      return signedIn() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "cashier";
+    }
+
+    function isStaff() {
+      return isAdmin() || isCashier();
+    }
     
     function isOwner(userId) {
       return signedIn() && request.auth.uid == userId;
@@ -33,7 +42,13 @@ service cloud.firestore {
 
     match /products/{productId} {
       allow read: if signedIn();
-      allow create, update, delete: if isAdmin();
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin() || (
+        isStaff()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["stock", "updatedAt"])
+        && request.resource.data.stock is int
+        && request.resource.data.stock >= 0
+      );
     }
 
     match /attendance/{attendanceId} {
@@ -55,12 +70,46 @@ service cloud.firestore {
     match /transactions/{transactionId} {
       allow read: if isAdmin() || (signedIn() && resource.data.userId == request.auth.uid);
       allow create: if signedIn() && request.resource.data.userId == request.auth.uid;
-      allow update: if isAdmin()
+      allow update: if (
+        isAdmin()
         && request.resource.data.diff(resource.data).affectedKeys()
           .hasOnly(["paymentMethod", "paidAmount", "changeAmount", "updatedAt"])
         && request.resource.data.paymentMethod in ["cash", "qris", "debit"]
         && request.resource.data.paidAmount >= resource.data.totalPrice
-        && request.resource.data.changeAmount == request.resource.data.paidAmount - resource.data.totalPrice;
+        && request.resource.data.changeAmount == request.resource.data.paidAmount - resource.data.totalPrice
+      ) || (
+        isStaff()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          "status",
+          "actualReturnDate",
+          "returnedAt",
+          "returnChecklist",
+          "lateDays",
+          "lateFeeAmount",
+          "totalPrice",
+          "paidAmount",
+          "changeAmount",
+          "updatedAt"
+        ])
+        && resource.data.actualReturnDate == null
+        && request.resource.data.status == "returned"
+        && request.resource.data.actualReturnDate is string
+        && request.resource.data.lateDays is int
+        && request.resource.data.lateDays >= 0
+        && request.resource.data.lateFeeAmount >= 0
+        && (
+          (("baseTotalPrice" in resource.data) && request.resource.data.totalPrice >= resource.data.baseTotalPrice)
+          || (!("baseTotalPrice" in resource.data) && request.resource.data.totalPrice >= resource.data.totalPrice)
+        )
+        && request.resource.data.paidAmount >= resource.data.paidAmount
+        && request.resource.data.changeAmount >= 0
+        && (
+          (request.resource.data.paidAmount >= request.resource.data.totalPrice
+            && request.resource.data.changeAmount == request.resource.data.paidAmount - request.resource.data.totalPrice)
+          || (request.resource.data.paidAmount < request.resource.data.totalPrice
+            && request.resource.data.changeAmount == 0)
+        )
+      );
       allow delete: if false;
     }
   }

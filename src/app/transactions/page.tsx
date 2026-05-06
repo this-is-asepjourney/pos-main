@@ -3,7 +3,7 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { CalendarDays, Download, PencilLine, ReceiptText, Save, Search, X } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
-import { formatCurrency, formatDateTime, toDate } from "@/lib/format";
+import { formatCurrency, formatDateTime, formatShortDate, toDate } from "@/lib/format";
 import { subscribeTransactions, updateTransaction } from "@/services/transaction-service";
 import type { PaymentMethod, PosTransaction, TransactionUpdateInput } from "@/types/pos";
 
@@ -94,7 +94,20 @@ export default function TransactionsPage() {
       WAKTU: toDate(transaction.createdAt),
       METODE: transaction.paymentMethod.toUpperCase(),
       ITEM: transaction.items.reduce((sum, item) => sum + item.qty, 0),
-      TOTAL: transaction.totalPrice,
+      HARI_SEWA: transaction.rentalDays ?? "",
+      TGL_AMBIL: transaction.pickupDate ?? "",
+      TGL_KEMBALI_RENCANA: transaction.returnDueDate ?? "",
+      TGL_KEMBALI_AKTUAL: transaction.actualReturnDate ?? "",
+      ID_JENIS: transaction.renterIdType ?? "",
+      ID_NOMOR: transaction.renterIdNumber ?? "",
+      HARI_TERLAMBAT: transaction.lateDays ?? 0,
+      DENDA: transaction.lateFeeAmount ?? 0,
+      HARI1_SUBTOTAL: transaction.firstDaySubtotal ?? "",
+      TAMBAHAN_HARI: transaction.multiDayExtraAmount ?? "",
+      SUBTOTAL_SBLM_LIBUR: transaction.rentalSubtotalBeforeHoliday ?? "",
+      PENGALI_LIBUR: transaction.holidayMultiplier ?? "",
+      TOTAL_SEWA: transaction.baseTotalPrice ?? transaction.totalPrice,
+      TOTAL_AKHIR: transaction.totalPrice,
       DIBAYAR: transaction.paidAmount,
       KEMBALIAN: transaction.changeAmount,
     }));
@@ -104,9 +117,11 @@ export default function TransactionsPage() {
         WAKTU: toDate(transaction.createdAt),
         KASIR: transaction.userName,
         METODE: transaction.paymentMethod.toUpperCase(),
-        PRODUK: item.name,
+        ALAT: item.name,
+        SPESIFIKASI: item.specification ?? "",
+        KETERANGAN: item.notes ?? "",
         QTY: item.qty,
-        HARGA: item.price,
+        TARIF_HARI1: item.price,
         SUBTOTAL: item.subtotal,
       })),
     );
@@ -115,11 +130,22 @@ export default function TransactionsPage() {
     const detailSheet = xlsx.utils.json_to_sheet(detailRows);
 
     summarySheet["!cols"] = [
-      { wch: 22 },
-      { wch: 24 },
       { wch: 20 },
+      { wch: 22 },
+      { wch: 20 },
+      { wch: 10 },
+      { wch: 8 },
+      { wch: 12 },
+      { wch: 16 },
+      { wch: 16 },
+      { wch: 8 },
       { wch: 12 },
       { wch: 10 },
+      { wch: 10 },
+      { wch: 12 },
+      { wch: 14 },
+      { wch: 12 },
+      { wch: 12 },
       { wch: 14 },
       { wch: 14 },
       { wch: 14 },
@@ -130,6 +156,8 @@ export default function TransactionsPage() {
       { wch: 24 },
       { wch: 12 },
       { wch: 28 },
+      { wch: 24 },
+      { wch: 24 },
       { wch: 10 },
       { wch: 14 },
       { wch: 14 },
@@ -309,6 +337,52 @@ export default function TransactionsPage() {
                     <p className="text-xs text-slate-400">Metode</p>
                     <p className="mt-2 font-bold uppercase">{activeTransaction.paymentMethod}</p>
                   </div>
+                  <div className="rounded-3xl bg-white/10 p-4">
+                    <p className="text-xs text-slate-400">Lama sewa</p>
+                    <p className="mt-2 font-bold">{activeTransaction.rentalDays ?? "—"} hari</p>
+                  </div>
+                  <div className="rounded-3xl bg-white/10 p-4">
+                    <p className="text-xs text-slate-400">Hari terlambat</p>
+                    <p className="mt-2 font-bold">{activeTransaction.lateDays ?? 0} hari</p>
+                  </div>
+                  {activeTransaction.pickupDate ? (
+                    <div className="rounded-3xl bg-white/10 p-4">
+                      <p className="text-xs text-slate-400">Ambil</p>
+                      <p className="mt-2 font-bold">{formatShortDate(activeTransaction.pickupDate)}</p>
+                    </div>
+                  ) : null}
+                  {activeTransaction.returnDueDate ? (
+                    <div className="rounded-3xl bg-white/10 p-4">
+                      <p className="text-xs text-slate-400">Rencana kembali</p>
+                      <p className="mt-2 font-bold">{formatShortDate(activeTransaction.returnDueDate)}</p>
+                    </div>
+                  ) : null}
+                  {activeTransaction.actualReturnDate ? (
+                    <div className="rounded-3xl bg-white/10 p-4">
+                      <p className="text-xs text-slate-400">Kembali aktual</p>
+                      <p className="mt-2 font-bold">{formatShortDate(activeTransaction.actualReturnDate)}</p>
+                    </div>
+                  ) : null}
+                  {activeTransaction.renterIdType || activeTransaction.renterIdNumber ? (
+                    <div className="col-span-2 rounded-3xl bg-white/10 p-4">
+                      <p className="text-xs text-slate-400">Identitas penyewa</p>
+                      <p className="mt-2 font-bold uppercase">
+                        {activeTransaction.renterIdType ?? "—"} · {activeTransaction.renterIdNumber ?? "—"}
+                      </p>
+                    </div>
+                  ) : null}
+                  <div className="rounded-3xl bg-white/10 p-4">
+                    <p className="text-xs text-slate-400">Denda</p>
+                    <p className="mt-2 font-bold">{formatCurrency(activeTransaction.lateFeeAmount ?? 0)}</p>
+                  </div>
+                  {activeTransaction.yearEndHolidayApplied ? (
+                    <div className="rounded-3xl bg-amber-400/15 p-4">
+                      <p className="text-xs text-amber-200/90">Pengali 28–31 Des</p>
+                      <p className="mt-2 font-bold text-amber-100">
+                        ×{activeTransaction.holidayMultiplier ?? 1}
+                      </p>
+                    </div>
+                  ) : null}
                 </div>
 
                 {editing ? (
@@ -394,6 +468,14 @@ export default function TransactionsPage() {
                       <div className="flex justify-between gap-3">
                         <div>
                           <p className="font-bold">{item.name}</p>
+                          {item.specification ? (
+                            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+                              {item.specification}
+                            </p>
+                          ) : null}
+                          {item.notes ? (
+                            <p className="text-xs text-slate-500">{item.notes}</p>
+                          ) : null}
                           <p className="text-sm text-slate-400">
                             {item.qty} x {formatCurrency(item.price)}
                           </p>
@@ -405,8 +487,36 @@ export default function TransactionsPage() {
                 </div>
 
                 <div className="mt-6 space-y-2 rounded-3xl bg-white p-4 text-slate-950">
+                  {activeTransaction.firstDaySubtotal != null ? (
+                    <div className="flex justify-between text-sm text-slate-500">
+                      <span>Subtotal hari ke-1</span>
+                      <span>{formatCurrency(activeTransaction.firstDaySubtotal)}</span>
+                    </div>
+                  ) : null}
+                  {activeTransaction.multiDayExtraAmount != null ? (
+                    <div className="flex justify-between text-sm text-slate-500">
+                      <span>Tambahan hari sewa (2+)</span>
+                      <span>{formatCurrency(activeTransaction.multiDayExtraAmount)}</span>
+                    </div>
+                  ) : null}
+                  {activeTransaction.rentalSubtotalBeforeHoliday != null ? (
+                    <div className="flex justify-between text-sm text-slate-500">
+                      <span>Subtotal sebelum pengali libur</span>
+                      <span>{formatCurrency(activeTransaction.rentalSubtotalBeforeHoliday)}</span>
+                    </div>
+                  ) : null}
                   <div className="flex justify-between text-sm text-slate-500">
-                    <span>Total</span>
+                    <span>Total sewa (sebelum denda)</span>
+                    <span>
+                      {formatCurrency(activeTransaction.baseTotalPrice ?? activeTransaction.totalPrice)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm text-slate-500">
+                    <span>Denda keterlambatan</span>
+                    <span>{formatCurrency(activeTransaction.lateFeeAmount ?? 0)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm text-slate-500">
+                    <span>Total akhir</span>
                     <span>{formatCurrency(activeTransaction.totalPrice)}</span>
                   </div>
                   <div className="flex justify-between text-sm text-slate-500">

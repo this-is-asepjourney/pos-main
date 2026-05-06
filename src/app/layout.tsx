@@ -14,9 +14,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Bro-POS - Smart Cashier System",
-  description: "Sistem POS modern untuk kasir, stok, produk, dan laporan bisnis.",
-  applicationName: "Bro-POS",
+  title: "JIROLU Outdoor Rental",
+  description: "Sistem kasir dan manajemen penyewaan alat outdoor JIROLU.",
+  applicationName: "JIROLU Outdoor Rental",
   icons: {
     icon: "/icon.svg",
     shortcut: "/icon.svg",

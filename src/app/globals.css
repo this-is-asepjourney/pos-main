@@ -13,7 +13,7 @@
 }
 
 body {
-  background: var(--background);
+  background: radial-gradient(ellipse 100% 80% at 50% -30%, rgb(236, 253, 245), var(--background));
   color: var(--foreground);
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
 }
@@ -34,6 +34,6 @@ button:disabled {
 }
 
 ::selection {
-  background: #bae6fd;
+  background: #a7f3d0;
   color: #0f172a;
 }

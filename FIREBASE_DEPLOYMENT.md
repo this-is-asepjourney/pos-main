@@ -159,6 +159,25 @@ products
 transactions
 ```
 
+### Tambahan struktur untuk alur pengembalian
+
+Agar fitur return berjalan penuh, dokumen `transactions` kini memakai field tambahan:
+
+```text
+status: "rented" | "overdue" | "returned"
+checkoutChecklist: { condition, accessories, photoNotes }
+returnChecklist: { condition, accessories, photoNotes }
+returnedAt
+actualReturnDate
+lateDays
+lateFeeAmount
+```
+
+Dan dokumen `products` akan diupdate `stock` saat:
+
+- checkout sewa (stok berkurang)
+- pengembalian (stok bertambah)
+
 ## 7. Firebase Init Tanpa Storage
 
 Jalankan:
@@ -267,6 +286,23 @@ service cloud.firestore {
 ```
 
 Deploy rules Firestore:
+
+```bash
+firebase deploy --only firestore:rules
+```
+
+### 9.1 Rules untuk modul pengembalian
+
+Pastikan `firestore.rules` terbaru sudah mengizinkan:
+
+- staff (`admin`/`cashier`) update stok produk untuk flow sewa+return (`stock`, `updatedAt`)
+- staff memproses return transaksi dengan field:
+  - `status`, `actualReturnDate`, `returnedAt`
+  - `returnChecklist`
+  - `lateDays`, `lateFeeAmount`, `totalPrice`
+  - `paidAmount`, `changeAmount`, `updatedAt`
+
+Setelah update rules:
 
 ```bash
 firebase deploy --only firestore:rules

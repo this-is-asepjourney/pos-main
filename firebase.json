@@ -23,7 +23,7 @@
     "providers": {
       "emailPassword": true,
       "googleSignIn": {
-        "oAuthBrandDisplayName": "My App",
+        "oAuthBrandDisplayName": "pos-main",
         "supportEmail": "support@undefined.firebaseapp.com"
       }
     }

@@ -1,4 +1,4 @@
-import { ReceiptText, Sparkles } from "lucide-react";
+import { Mountain, TentTree, Trees } from "lucide-react";
 import { clsx } from "clsx";
 
 type BrandMarkProps = {
@@ -12,18 +12,19 @@ export function BrandMark({ className, iconClassName, textClassName }: BrandMark
     <div className={clsx("flex items-center gap-3", className)}>
       <span
         className={clsx(
-          "relative flex size-12 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-cyan-300 via-sky-400 to-blue-600 text-slate-950 shadow-xl shadow-cyan-400/25 ring-1 ring-white/20",
+          "relative flex size-12 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-300 via-emerald-500 to-green-700 text-white shadow-xl shadow-emerald-600/25 ring-1 ring-white/20",
           iconClassName,
         )}
       >
-        <span className="absolute -right-3 -top-3 size-8 rounded-full bg-white/35 blur-sm" />
-        <ReceiptText size={23} className="relative z-10" />
-        <Sparkles size={12} className="absolute right-2 top-2 text-white" />
+        <span className="absolute -right-3 -top-3 size-8 rounded-full bg-white/25 blur-sm" />
+        <TentTree size={21} className="relative z-10" />
+        <Mountain size={12} className="absolute right-1.5 top-1.5 text-emerald-100" />
+        <Trees size={12} className="absolute -bottom-0.5 left-1.5 text-emerald-100" />
       </span>
       <span className={textClassName}>
-        <span className="block text-xl font-black tracking-tight">Bro-POS</span>
-        <span className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300">
-          Smart cashier
+        <span className="block text-xl font-black tracking-tight">JIROLU</span>
+        <span className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-300">
+          Capture your nature
         </span>
       </span>
     </div>

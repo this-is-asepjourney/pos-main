@@ -33,8 +33,12 @@ export type Category = {
 export type Product = {
   id: string;
   name: string;
+  specification?: string;
+  notes?: string;
   price: number;
   stock: number;
+  categoryIds?: string[];
+  categoryNames?: string[];
   categoryId: string;
   categoryName: string;
   imageUrl?: string;
@@ -46,8 +50,12 @@ export type Product = {
 
 export type ProductInput = {
   name: string;
+  specification?: string;
+  notes?: string;
   price: number;
   stock: number;
+  categoryIds?: string[];
+  categoryNames?: string[];
   categoryId: string;
   categoryName: string;
   imageUrl?: string;
@@ -58,6 +66,8 @@ export type ProductInput = {
 export type CartItem = {
   productId: string;
   name: string;
+  specification?: string;
+  notes?: string;
   price: number;
   qty: number;
   stock: number;
@@ -69,9 +79,20 @@ export type CartItem = {
 export type TransactionItem = {
   productId: string;
   name: string;
+  specification?: string;
+  notes?: string;
   price: number;
   qty: number;
   subtotal: number;
+  categoryName?: string;
+};
+
+export type RenterIdType = "ktp" | "sim" | "";
+export type RentalStatus = "rented" | "overdue" | "returned";
+export type RentalChecklist = {
+  condition: string;
+  accessories: string;
+  photoNotes: string;
 };
 
 export type PaymentMethod = "cash" | "qris" | "debit";
@@ -81,6 +102,26 @@ export type PosTransaction = {
   invoiceCode: string;
   userId: string;
   userName: string;
+  /** Total sewa setelah hari sewa + pengali khusus (mis. 28–31 Des), sebelum denda keterlambatan. */
+  baseTotalPrice?: number;
+  rentalDays?: number;
+  pickupDate?: string;
+  returnDueDate?: string;
+  actualReturnDate?: string;
+  firstDaySubtotal?: number;
+  /** Biaya tambahan karena tarif hari ke-2+ (+20% per hari tambahan, sebelum pengali liburan). */
+  multiDayExtraAmount?: number;
+  rentalSubtotalBeforeHoliday?: number;
+  holidayMultiplier?: number;
+  yearEndHolidayApplied?: boolean;
+  renterIdType?: RenterIdType;
+  renterIdNumber?: string;
+  status?: RentalStatus;
+  checkoutChecklist?: RentalChecklist;
+  returnChecklist?: RentalChecklist;
+  returnedAt?: FirestoreDate;
+  lateDays?: number;
+  lateFeeAmount?: number;
   totalPrice: number;
   paidAmount: number;
   changeAmount: number;
@@ -95,8 +136,29 @@ export type TransactionUpdateInput = {
   paymentMethod: PaymentMethod;
 };
 
+export type ReturnTransactionInput = {
+  actualReturnDate: string;
+  additionalPaidAmount: number;
+  returnChecklist: RentalChecklist;
+};
+
 export type CheckoutPayload = {
   cart: CartItem[];
+  rentalDays: number;
+  pickupDate: string;
+  returnDueDate: string;
+  actualReturnDate: string;
+  firstDaySubtotal: number;
+  multiDayExtraAmount: number;
+  rentalSubtotalBeforeHoliday: number;
+  holidayMultiplier: number;
+  yearEndHolidayApplied: boolean;
+  renterIdType: RenterIdType;
+  renterIdNumber: string;
+  checkoutChecklist: RentalChecklist;
+  baseTotalPrice: number;
+  lateDays: number;
+  lateFeeAmount: number;
   totalPrice: number;
   paidAmount: number;
   paymentMethod: PaymentMethod;

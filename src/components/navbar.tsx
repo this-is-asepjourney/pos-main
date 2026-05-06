@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { BarChart3, Boxes, Clock3, LogOut, ReceiptText, ShoppingCart } from "lucide-react";
+import { BarChart3, Boxes, Clock3, LogOut, ReceiptText, ShoppingCart, Undo2 } from "lucide-react";
 import { useAuth } from "@/components/app-provider";
 import { BrandMark } from "@/components/brand-mark";
 import { clsx } from "clsx";
@@ -13,6 +13,7 @@ const navItems = [
   { href: "/attendance", label: "Absensi", icon: Clock3, roles: ["admin", "cashier"] as UserRole[] },
   { href: "/dashboard", label: "Dashboard", icon: BarChart3, roles: ["admin"] as UserRole[] },
   { href: "/products", label: "Produk", icon: Boxes, roles: ["admin"] as UserRole[] },
+  { href: "/returns", label: "Pengembalian", icon: Undo2, roles: ["admin", "cashier"] as UserRole[] },
   { href: "/transactions", label: "Transaksi", icon: ReceiptText, roles: ["admin"] as UserRole[] },
 ];
 
@@ -29,7 +30,7 @@ export function Navbar() {
   return (
     <aside className="flex w-full flex-col gap-6 border-b border-white/10 bg-slate-950 px-4 py-4 text-white lg:min-h-screen lg:w-72 lg:border-b-0 lg:border-r lg:px-5">
       <div className="flex items-center justify-between lg:block">
-        <Link href="/" aria-label="Bro-POS home">
+        <Link href="/" aria-label="JIROLU home">
           <BrandMark textClassName="text-white" />
         </Link>
         {!isConfigured ? (
@@ -68,7 +69,7 @@ export function Navbar() {
         <div className="mt-2 flex items-center justify-between gap-2">
           <div>
             <p className="text-sm font-semibold">{displayName}</p>
-            <p className="text-[11px] uppercase tracking-[0.16em] text-cyan-300">{role}</p>
+            <p className="text-[11px] uppercase tracking-[0.16em] text-emerald-300">{role}</p>
           </div>
           <button
             type="button"
@@ -83,7 +84,7 @@ export function Navbar() {
       <div className="mt-auto hidden rounded-3xl border border-white/10 bg-white/5 p-4 lg:block">
         <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Operator</p>
         <p className="mt-2 font-semibold">{displayName}</p>
-        <p className="mt-1 text-xs uppercase tracking-[0.18em] text-cyan-300">{role}</p>
+        <p className="mt-1 text-xs uppercase tracking-[0.18em] text-emerald-300">{role}</p>
         <button
           type="button"
           onClick={handleLogout}

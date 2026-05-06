@@ -19,12 +19,17 @@ import {
   updateCategory,
   updateProduct,
 } from "@/services/product-service";
-import type { Category, Product, ProductInput } from "@/types/pos";
+import { resolveRentalStatus, subscribeTransactions } from "@/services/transaction-service";
+import type { Category, PosTransaction, Product, ProductInput } from "@/types/pos";
 
 const emptyForm: ProductInput = {
   name: "",
+  specification: "",
+  notes: "",
   price: 0,
   stock: 0,
+  categoryIds: [],
+  categoryNames: [],
   categoryId: "",
   categoryName: "",
   imageUrl: "",
@@ -63,9 +68,32 @@ const readNumberCell = (row: ProductImportRow, header: string) => {
   return Number.isFinite(parsed) ? parsed : 0;
 };
 
+const readFirstStringCell = (row: ProductImportRow, headers: string[]) => {
+  for (const header of headers) {
+    const value = readStringCell(row, header);
+    if (value) return value;
+  }
+  return "";
+};
+
+const readFirstNumberCell = (row: ProductImportRow, headers: string[]) => {
+  for (const header of headers) {
+    const value = readNumberCell(row, header);
+    if (value > 0) return value;
+  }
+  return 0;
+};
+
+const parseCategoryList = (value: string) =>
+  value
+    .split(/[;,/|]+/g)
+    .map((item) => item.trim())
+    .filter(Boolean);
+
 export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [transactions, setTransactions] = useState<PosTransaction[]>([]);
   const [form, setForm] = useState<ProductInput>(emptyForm);
   const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
   const [selectedImagePreview, setSelectedImagePreview] = useState("");
@@ -86,9 +114,15 @@ export default function ProductsPage() {
     const unsubscribeCategories = subscribeCategories((items) => {
       setCategories(items);
       setForm((current) =>
-        current.categoryId || !items.length
+        current.categoryIds?.length || current.categoryId || !items.length
           ? current
-          : { ...current, categoryId: items[0].id, categoryName: items[0].name },
+          : {
+              ...current,
+              categoryIds: [items[0].id],
+              categoryNames: [items[0].name],
+              categoryId: items[0].id,
+              categoryName: items[0].name,
+            },
       );
     });
 
@@ -97,6 +131,8 @@ export default function ProductsPage() {
       unsubscribeCategories();
     };
   }, []);
+
+  useEffect(() => subscribeTransactions(setTransactions, 300), []);
 
   useEffect(() => {
     return () => {
@@ -109,19 +145,40 @@ export default function ProductsPage() {
   const filteredProducts = useMemo(
     () =>
       products.filter((product) =>
-        `${product.name} ${product.categoryName} ${product.sku ?? ""}`
+        `${product.name} ${product.categoryName} ${(product.categoryNames ?? []).join(" ")} ${product.sku ?? ""}`
           .toLowerCase()
           .includes(query.toLowerCase()),
       ),
     [products, query],
   );
 
-  const handleCategoryChange = (categoryId: string) => {
+  const rentalStatusMap = useMemo(() => {
+    const map = new Map<string, { rented: number; overdue: number }>();
+    for (const trx of transactions) {
+      const status = resolveRentalStatus(trx);
+      if (status === "returned") continue;
+      for (const item of trx.items) {
+        const current = map.get(item.productId) ?? { rented: 0, overdue: 0 };
+        current.rented += item.qty;
+        if (status === "overdue") current.overdue += item.qty;
+        map.set(item.productId, current);
+      }
+    }
+    return map;
+  }, [transactions]);
+
+  const handleCategoryToggle = (categoryId: string) => {
     const category = categories.find((item) => item.id === categoryId);
+    if (!category) return;
+
     setForm((current) => ({
       ...current,
-      categoryId,
-      categoryName: category?.name ?? "",
+      categoryIds: current.categoryIds?.includes(categoryId)
+        ? current.categoryIds.filter((id) => id !== categoryId)
+        : [...(current.categoryIds ?? []), categoryId],
+      categoryNames: current.categoryIds?.includes(categoryId)
+        ? (current.categoryNames ?? []).filter((name) => name !== category.name)
+        : [...(current.categoryNames ?? []), category.name],
     }));
   };
 
@@ -131,6 +188,8 @@ export default function ProductsPage() {
     setSelectedImagePreview("");
     setForm({
       ...emptyForm,
+      categoryIds: categories[0]?.id ? [categories[0].id] : [],
+      categoryNames: categories[0]?.name ? [categories[0].name] : [],
       categoryId: categories[0]?.id ?? "",
       categoryName: categories[0]?.name ?? "",
     });
@@ -142,10 +201,24 @@ export default function ProductsPage() {
     setSavingProduct(true);
 
     try {
+      const selectedCategoryIds = form.categoryIds ?? [];
+      const selectedCategoryNames = form.categoryNames ?? [];
+      if (!selectedCategoryIds.length || !selectedCategoryNames.length) {
+        throw new Error("Pilih minimal 1 kategori alat.");
+      }
+
+      const primaryCategoryId = selectedCategoryIds[0];
+      const primaryCategoryName = selectedCategoryNames[0];
       const imageUrl = selectedImageFile ? await uploadImageToCloudinary(selectedImageFile) : form.imageUrl;
       const payload: ProductInput = {
         ...form,
+        categoryIds: selectedCategoryIds,
+        categoryNames: selectedCategoryNames,
+        categoryId: primaryCategoryId,
+        categoryName: primaryCategoryName,
         imageUrl,
+        specification: form.specification?.trim() ?? "",
+        notes: form.notes?.trim() ?? "",
         sku: form.sku?.trim() ?? "",
         barcode: form.barcode?.trim() ?? "",
       };
@@ -194,8 +267,22 @@ export default function ProductsPage() {
     setSelectedImagePreview("");
     setForm({
       name: product.name,
+      specification: product.specification ?? "",
+      notes: product.notes ?? "",
       price: product.price,
       stock: product.stock,
+      categoryIds:
+        product.categoryIds && product.categoryIds.length
+          ? product.categoryIds
+          : product.categoryId
+            ? [product.categoryId]
+            : [],
+      categoryNames:
+        product.categoryNames && product.categoryNames.length
+          ? product.categoryNames
+          : product.categoryName
+            ? [product.categoryName]
+            : [],
       categoryId: product.categoryId,
       categoryName: product.categoryName,
       imageUrl: product.imageUrl ?? "",
@@ -268,11 +355,15 @@ export default function ProductsPage() {
       }
 
       const headers = Object.keys(rows[0]).map(normalizeHeader);
-      const requiredHeaders = ["PRODUK", "KATEGORI", "STOK", "HARGA"];
-      const missingHeaders = requiredHeaders.filter((header) => !headers.includes(header));
+      const hasToolHeader = headers.includes("ALAT") || headers.includes("PRODUK");
+      const hasRateHeader = headers.includes("TARIF") || headers.includes("HARGA");
+      const hasCategoryHeader = headers.includes("KATEGORI");
+      const hasStockHeader = headers.includes("STOK");
 
-      if (missingHeaders.length) {
-        throw new Error(`Header wajib tidak ditemukan: ${missingHeaders.join(", ")}.`);
+      if (!hasToolHeader || !hasRateHeader || !hasCategoryHeader || !hasStockHeader) {
+        throw new Error(
+          "Header wajib tidak lengkap. Gunakan: ALAT/PRODUK, KATEGORI, STOK, TARIF/HARGA.",
+        );
       }
 
       const parseDateCell = (value: unknown) => {
@@ -292,21 +383,29 @@ export default function ProductsPage() {
 
       const importItems = rows
         .map<ProductImportItem | null>((row, index) => {
-          const name = readStringCell(row, "PRODUK");
-          const categoryName = readStringCell(row, "KATEGORI");
+          const name = readFirstStringCell(row, ["ALAT", "PRODUK"]);
+          const categoryNamesRaw = readStringCell(row, "KATEGORI");
+          const categoryNames = parseCategoryList(categoryNamesRaw);
+          const specification = readStringCell(row, "SPESIFIKASI");
+          const notes = readStringCell(row, "KETERANGAN");
           const stock = Math.max(0, Math.floor(readNumberCell(row, "STOK")));
-          const price = Math.max(0, readNumberCell(row, "HARGA"));
+          const price = Math.max(0, readFirstNumberCell(row, ["TARIF", "HARGA"]));
           const createdAt = parseDateCell(getImportCell(row, "DIBUAT"));
 
-          if (!name && !categoryName) return null;
+          if (!name && !categoryNames.length) return null;
           if (!name) throw new Error(`Baris ${index + 2}: PRODUK wajib diisi.`);
-          if (!categoryName) throw new Error(`Baris ${index + 2}: KATEGORI wajib diisi.`);
+          if (!categoryNames.length) throw new Error(`Baris ${index + 2}: KATEGORI wajib diisi.`);
           if (price <= 0) throw new Error(`Baris ${index + 2}: HARGA harus lebih dari 0.`);
 
+          const primaryCategoryName = categoryNames[0] ?? "";
           const item: ProductImportItem = {
             name,
+            specification,
+            notes,
+            categoryIds: [],
+            categoryNames,
             categoryId: "",
-            categoryName,
+            categoryName: primaryCategoryName,
             stock,
             price,
             sku: readStringCell(row, "SKU"),
@@ -322,31 +421,44 @@ export default function ProductsPage() {
         throw new Error("Tidak ada produk valid untuk diimport.");
       }
 
-      const categoryMap = new Map(
-        categories.map((category) => [category.name.trim().toLowerCase(), category]),
-      );
+      const categoryMap = new Map(categories.map((category) => [category.name.trim().toLowerCase(), category]));
 
       for (const item of importItems) {
-        const categoryKey = item.categoryName.trim().toLowerCase();
-        let category = categoryMap.get(categoryKey);
+        const resolvedCategories: Category[] = [];
+        for (const categoryNameInput of item.categoryNames ?? [item.categoryName]) {
+          const categoryKey = categoryNameInput.trim().toLowerCase();
+          if (!categoryKey) continue;
+          let category = categoryMap.get(categoryKey);
 
-        if (!category) {
-          const categoryRef = await createCategory(item.categoryName);
-          category = {
-            id: categoryRef.id,
-            name: item.categoryName,
-            createdAt: new Date(),
-          };
-          categoryMap.set(categoryKey, category);
+          if (!category) {
+            const categoryRef = await createCategory(categoryNameInput);
+            category = {
+              id: categoryRef.id,
+              name: categoryNameInput,
+              createdAt: new Date(),
+            };
+            categoryMap.set(categoryKey, category);
+          }
+
+          resolvedCategories.push(category);
         }
+
+        if (!resolvedCategories.length) {
+          throw new Error(`Kategori tidak valid untuk produk ${item.name}.`);
+        }
+        const primaryCategory = resolvedCategories[0];
 
         await importProduct(
           {
             name: item.name,
+            specification: item.specification,
+            notes: item.notes,
             price: item.price,
             stock: item.stock,
-            categoryId: category.id,
-            categoryName: category.name,
+            categoryIds: resolvedCategories.map((category) => category.id),
+            categoryNames: resolvedCategories.map((category) => category.name),
+            categoryId: primaryCategory.id,
+            categoryName: primaryCategory.name,
             imageUrl: item.imageUrl,
             sku: item.sku,
             barcode: item.barcode,
@@ -367,9 +479,11 @@ export default function ProductsPage() {
   const handleDownloadTemplate = async () => {
     const xlsx = await import("xlsx");
     const worksheet = xlsx.utils.aoa_to_sheet([
-      ["PRODUK", "KATEGORI", "SKU", "STOK", "HARGA", "DIBUAT"],
-      ["Contoh Kopi Susu", "Minuman", "KS-001", 25, 18000, "2026-04-29"],
-      ["Contoh Roti Bakar", "Makanan", "RB-001", 12, 15000, "2026-04-29"],
+      ["ALAT", "SPESIFIKASI", "KATEGORI", "SKU", "STOK", "TARIF", "KETERANGAN", "DIBUAT"],
+      ["Tenda JAVA 6", "JAVA 6", "Tenda", "TND-JV6", 20, 70000, "Double layer", "2026-04-29"],
+      ["Carrier 60L", "60L", "Carrier", "CRR-60L", 15, 22000, "-", "2026-04-29"],
+      ["Gas Kaleng 230gr", "230 gr", "Sekali Pakai", "GAS-230", 90, 15000, "Consumable", "2026-04-29"],
+      ["Headlamp", "300 lm", "Perlampuan", "LMP-H01", 35, 10000, "Inc battery/charge", "2026-04-29"],
     ]);
 
     worksheet["!cols"] = [
@@ -378,12 +492,13 @@ export default function ProductsPage() {
       { wch: 16 },
       { wch: 10 },
       { wch: 14 },
+      { wch: 28 },
       { wch: 16 },
     ];
 
     const workbook = xlsx.utils.book_new();
     xlsx.utils.book_append_sheet(workbook, worksheet, "Template Produk");
-    xlsx.writeFile(workbook, "template-import-produk-bro-pos.xlsx");
+    xlsx.writeFile(workbook, "template-import-produk-outdoor.xlsx");
   };
 
   return (
@@ -394,32 +509,49 @@ export default function ProductsPage() {
           <div className="rounded-[2rem] bg-slate-950 p-6 text-white shadow-xl">
             <p className="flex items-center gap-2 text-sm font-bold uppercase tracking-[0.18em] text-cyan-200">
               <Boxes size={17} />
-              Inventory
+              Outdoor Rental
             </p>
-            <h1 className="mt-3 text-3xl font-black tracking-tight">Manajemen produk</h1>
+            <h1 className="mt-3 text-3xl font-black tracking-tight">Manajemen alat sewa</h1>
             <p className="mt-2 text-sm text-slate-300">
-              Kelola menu, harga, stok, SKU, barcode, dan kategori yang disimpan ke Firestore.
+              Kelola daftar alat outdoor, tarif sewa harian (hari ke-1), stok siap sewa, SKU, barcode, dan
+              kategori.
             </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4 rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm">
             <h2 className="text-xl font-black text-slate-950">
-              {editingId ? "Edit produk" : "Tambah produk"}
+              {editingId ? "Edit alat sewa" : "Tambah alat sewa"}
             </h2>
             <input
               value={form.name}
               onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))}
-              placeholder="Nama produk"
+              placeholder="Nama alat (contoh: Tenda JAVA 6)"
               className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none focus:border-cyan-300"
               required
             />
+            <div className="grid grid-cols-2 gap-3">
+              <input
+                value={form.specification ?? ""}
+                onChange={(event) =>
+                  setForm((current) => ({ ...current, specification: event.target.value }))
+                }
+                placeholder="Spesifikasi (contoh: 60L)"
+                className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none focus:border-cyan-300"
+              />
+              <input
+                value={form.notes ?? ""}
+                onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))}
+                placeholder="Keterangan (contoh: Include gas)"
+                className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none focus:border-cyan-300"
+              />
+            </div>
             <div className="grid grid-cols-2 gap-3">
               <input
                 type="number"
                 min={0}
                 value={form.price || ""}
                 onChange={(event) => setForm((current) => ({ ...current, price: Number(event.target.value) }))}
-                placeholder="Harga"
+                placeholder="Tarif hari ke-1"
                 className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none focus:border-cyan-300"
                 required
               />
@@ -428,35 +560,52 @@ export default function ProductsPage() {
                 min={0}
                 value={form.stock || ""}
                 onChange={(event) => setForm((current) => ({ ...current, stock: Number(event.target.value) }))}
-                placeholder="Stok"
+                placeholder="Stok siap sewa"
                 className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none focus:border-cyan-300"
                 required
               />
             </div>
-            <select
-              value={form.categoryId}
-              onChange={(event) => handleCategoryChange(event.target.value)}
-              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none focus:border-cyan-300"
-              required
-            >
-              <option value="">Pilih kategori</option>
-              {categories.map((category) => (
-                <option key={category.id} value={category.id}>
-                  {category.name}
-                </option>
-              ))}
-            </select>
+            <div className="space-y-2 rounded-2xl border border-slate-200 bg-slate-50 p-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+                Kategori alat (bisa lebih dari 1)
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {categories.map((category) => {
+                  const active = form.categoryIds?.includes(category.id);
+                  return (
+                    <button
+                      key={category.id}
+                      type="button"
+                      onClick={() => handleCategoryToggle(category.id)}
+                      className={
+                        active
+                          ? "rounded-full bg-slate-950 px-3 py-1 text-xs font-black text-white"
+                          : "rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-bold text-slate-700"
+                      }
+                    >
+                      {category.name}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-xs text-slate-500">
+                Kategori utama untuk denda otomatis:{" "}
+                <span className="font-bold text-slate-700">
+                  {(form.categoryNames ?? [])[0] ?? "Belum dipilih"}
+                </span>
+              </p>
+            </div>
             <div className="grid grid-cols-2 gap-3">
               <input
                 value={form.sku ?? ""}
                 onChange={(event) => setForm((current) => ({ ...current, sku: event.target.value }))}
-                placeholder="SKU (opsional)"
+                placeholder="SKU alat (opsional)"
                 className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none focus:border-cyan-300"
               />
               <input
                 value={form.barcode ?? ""}
                 onChange={(event) => setForm((current) => ({ ...current, barcode: event.target.value }))}
-                placeholder="Barcode (opsional)"
+                placeholder="Barcode/serial (opsional)"
                 className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none focus:border-cyan-300"
               />
             </div>
@@ -470,7 +619,7 @@ export default function ProductsPage() {
                 ) : (
                   <>
                     <ImageUp size={16} />
-                    Pilih Gambar Produk
+                    Pilih Foto Alat
                   </>
                 )}
                 <input
@@ -490,7 +639,7 @@ export default function ProductsPage() {
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={selectedImagePreview || form.imageUrl}
-                  alt="Preview produk"
+                  alt="Preview alat sewa"
                   className="mt-3 h-32 w-full rounded-xl object-cover"
                 />
               ) : null}
@@ -518,9 +667,10 @@ export default function ProductsPage() {
                 <FileSpreadsheet size={22} />
               </span>
               <div>
-                <h2 className="text-xl font-black text-slate-950">Import produk Excel</h2>
+                <h2 className="text-xl font-black text-slate-950">Import alat dari Excel</h2>
                 <p className="mt-1 text-sm text-slate-500">
-                  Upload file `.xlsx` / `.xls` dengan header: PRODUK, KATEGORI, SKU, STOK, HARGA, DIBUAT.
+                  Upload file `.xlsx` / `.xls` dengan header: ALAT, SPESIFIKASI, KATEGORI, SKU, STOK, TARIF,
+                  KETERANGAN, DIBUAT.
                 </p>
               </div>
             </div>
@@ -537,7 +687,7 @@ export default function ProductsPage() {
                 {importingProducts ? (
                   <>
                     <LoaderCircle size={16} className="animate-spin" />
-                    Mengimport produk...
+                    Mengimport alat...
                   </>
                 ) : (
                   <>
@@ -555,18 +705,21 @@ export default function ProductsPage() {
               </label>
             </div>
             <div className="mt-3 rounded-2xl bg-slate-50 p-3 text-xs font-semibold text-slate-500">
-              Format contoh: `PRODUK | KATEGORI | SKU | STOK | HARGA | DIBUAT`.
-              Kolom SKU dan DIBUAT boleh kosong.
+              Format: `ALAT | SPESIFIKASI | KATEGORI | SKU | STOK | TARIF | KETERANGAN | DIBUAT`. Header
+              kompatibel lama juga didukung: `PRODUK` dan `HARGA`.
             </div>
           </div>
 
           <div className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm">
             <h2 className="text-xl font-black text-slate-950">Kategori</h2>
+            <p className="mt-1 text-xs font-semibold text-slate-500">
+              Rekomendasi awal: Tenda, Carrier, Sepatu, Sleeping Set, Cooking Set, Perlampuan, Sekali Pakai.
+            </p>
             <div className="mt-4 flex gap-2">
               <input
                 value={categoryName}
                 onChange={(event) => setCategoryName(event.target.value)}
-                placeholder="Nama kategori"
+                placeholder="Nama kategori alat"
                 className="min-w-0 flex-1 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none focus:border-cyan-300"
               />
               <button type="button" onClick={handleSubmitCategory} className="rounded-2xl bg-cyan-400 px-4 py-3 font-black text-slate-950">
@@ -628,14 +781,14 @@ export default function ProductsPage() {
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <h2 className="text-2xl font-black text-slate-950">Daftar produk</h2>
-              <p className="text-sm text-slate-500">{filteredProducts.length} produk tampil</p>
+              <p className="text-sm text-slate-500">{filteredProducts.length} alat tampil</p>
             </div>
             <label className="relative">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
               <input
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder="Cari produk..."
+                placeholder="Cari alat/kategori/SKU..."
                 className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 pl-11 pr-4 outline-none focus:border-cyan-300 lg:w-80"
               />
             </label>
@@ -653,16 +806,24 @@ export default function ProductsPage() {
                     />
                     <div className="min-w-0">
                       <p className="text-base font-black text-slate-950">{product.name}</p>
-                      <p className="text-xs font-semibold text-slate-500">{product.categoryName}</p>
+                      <p className="text-xs font-semibold text-slate-500">
+                        {(product.categoryNames ?? [product.categoryName]).join(", ")}
+                      </p>
                     </div>
                   </div>
                   <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-slate-700">
-                    Stok {product.stock}
+                    Ready {product.stock}
                   </span>
                 </div>
                 <div className="mt-3 grid grid-cols-2 gap-2 text-xs font-semibold text-slate-600">
                   <p>SKU: {product.sku ?? "-"}</p>
                   <p className="text-right">{formatCurrency(product.price)}</p>
+                  <p className="col-span-2">Spesifikasi: {product.specification || "-"}</p>
+                  <p className="col-span-2">Keterangan: {product.notes || "-"}</p>
+                  <p className="col-span-2">
+                    Sedang disewa: {rentalStatusMap.get(product.id)?.rented ?? 0} · Overdue:{" "}
+                    {rentalStatusMap.get(product.id)?.overdue ?? 0}
+                  </p>
                   <p className="col-span-2">Dibuat: {formatDateTime(product.createdAt)}</p>
                 </div>
                 <div className="mt-4 flex gap-2">
@@ -694,7 +855,7 @@ export default function ProductsPage() {
                 </div>
                 {restockProductId === product.id ? (
                   <form onSubmit={handleRestock} className="mt-3 rounded-2xl bg-white p-3">
-                    <p className="text-sm font-black text-slate-950">Restock {product.name}</p>
+                    <p className="text-sm font-black text-slate-950">Tambah stok {product.name}</p>
                     <div className="mt-2 flex gap-2">
                       <input
                         type="number"
@@ -729,11 +890,14 @@ export default function ProductsPage() {
             <table className="w-full min-w-[840px] text-left text-sm">
               <thead className="text-xs uppercase tracking-[0.16em] text-slate-400">
                 <tr>
-                  <th className="py-3">Produk</th>
+                  <th className="py-3">Alat</th>
                   <th>Kategori</th>
+                  <th>Spesifikasi</th>
+                  <th>Keterangan</th>
+                  <th>Status alat</th>
                   <th>SKU</th>
                   <th>Stok</th>
-                  <th>Harga</th>
+                  <th>Tarif hari ke-1</th>
                   <th>Dibuat</th>
                   <th className="text-right">Aksi</th>
                 </tr>
@@ -756,7 +920,22 @@ export default function ProductsPage() {
                         </div>
                       </div>
                     </td>
-                    <td>{product.categoryName}</td>
+                    <td>{(product.categoryNames ?? [product.categoryName]).join(", ")}</td>
+                    <td>{product.specification || "-"}</td>
+                    <td className="max-w-[200px] truncate">{product.notes || "-"}</td>
+                    <td>
+                      <div className="flex flex-wrap gap-1 text-xs font-black">
+                        <span className="rounded-full bg-emerald-100 px-2 py-1 text-emerald-700">
+                          tersedia {product.stock}
+                        </span>
+                        <span className="rounded-full bg-cyan-100 px-2 py-1 text-cyan-700">
+                          disewa {rentalStatusMap.get(product.id)?.rented ?? 0}
+                        </span>
+                        <span className="rounded-full bg-rose-100 px-2 py-1 text-rose-700">
+                          overdue {rentalStatusMap.get(product.id)?.overdue ?? 0}
+                        </span>
+                      </div>
+                    </td>
                     <td>{product.sku ?? "-"}</td>
                     <td>
                       <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-black">
