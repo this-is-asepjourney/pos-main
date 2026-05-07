@@ -1,0 +1,100 @@
+@import "tailwindcss";
+
+/* Brand palette: #5B7E3C #FFD65A #FF9D23 #EA5252 */
+:root {
+  --background: #f8fafc;
+  --foreground: #0f172a;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+
+  /* Primary green — #5B7E3C */
+  --color-emerald-50: #f4f7f2;
+  --color-emerald-100: #e6eee0;
+  --color-emerald-200: #ccdcc4;
+  --color-emerald-300: #a8c498;
+  --color-emerald-400: #82a66c;
+  --color-emerald-500: #5b7e3c;
+  --color-emerald-600: #4f6d35;
+  --color-emerald-700: #42592d;
+  --color-emerald-800: #374825;
+  --color-emerald-900: #2f3d21;
+  --color-emerald-950: #1a2112;
+
+  --color-green-600: #4f6d35;
+  --color-green-700: #42592d;
+  --color-green-800: #374825;
+
+  /* Highlights / warning — #FFD65A */
+  --color-amber-50: #fffbeb;
+  --color-amber-100: #fff4cc;
+  --color-amber-200: #ffe999;
+  --color-amber-300: #ffe066;
+  --color-amber-400: #ffd65a;
+  --color-amber-500: #efc648;
+  --color-amber-600: #d4a918;
+  --color-amber-700: #b38712;
+  --color-amber-800: #926d12;
+  --color-amber-900: #785a11;
+  --color-amber-950: #453308;
+
+  /* Accent (maps former cyan UI) — #FF9D23 */
+  --color-cyan-50: #fff8ed;
+  --color-cyan-100: #ffedd5;
+  --color-cyan-200: #ffd7aa;
+  --color-cyan-300: #ffb86d;
+  --color-cyan-400: #ff9d23;
+  --color-cyan-500: #f0880c;
+  --color-cyan-600: #cc7008;
+  --color-cyan-700: #a85a0c;
+  --color-cyan-800: #894910;
+  --color-cyan-900: #713e12;
+  --color-cyan-950: #401f06;
+
+  /* Destructive / stock badges — #EA5252 */
+  --color-rose-50: #fef2f2;
+  --color-rose-100: #ffe4e4;
+  --color-rose-200: #ffcdcd;
+  --color-rose-300: #ffa8a8;
+  --color-rose-400: #f67676;
+  --color-rose-500: #ea5252;
+  --color-rose-600: #d74444;
+  --color-rose-700: #b83737;
+  --color-rose-800: #983232;
+  --color-rose-900: #7f3030;
+  --color-rose-950: #451717;
+}
+
+body {
+  background: radial-gradient(
+    ellipse 100% 80% at 50% -30%,
+    rgb(244 247 242),
+    var(--background)
+  );
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+::selection {
+  background: #ccdcc4;
+  color: #0f172a;
+}
