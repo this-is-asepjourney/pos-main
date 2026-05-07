@@ -1,6 +1,10 @@
 # Examples
 
+<<<<<<< HEAD
 Complete, working examples for common SQL Connect use cases.
+=======
+Complete, working examples for common Data Connect use cases.
+>>>>>>> 073870c49c37e40a684fe502677b2ae29c3050be
 
 ---
 
@@ -145,6 +149,7 @@ mutation DeleteReview($id: UUID!) @auth(level: USER) {
 }
 ```
 
+<<<<<<< HEAD
 ### Realtime Queries
 
 ```graphql
@@ -234,6 +239,8 @@ const unsubLeaderboard = subscribe(movieLeaderboardRef(), {
 // unsubLeaderboard();
 ```
 
+=======
+>>>>>>> 073870c49c37e40a684fe502677b2ae29c3050be
 ---
 
 ## E-Commerce Store

@@ -13,7 +13,11 @@ export function ProductImage({ src, name, className }: ProductImageProps) {
   return (
     <div
       className={clsx(
+<<<<<<< HEAD
         "flex shrink-0 items-center justify-center overflow-hidden bg-gradient-to-br from-emerald-50 via-amber-50 to-cyan-100 text-cyan-900",
+=======
+        "flex shrink-0 items-center justify-center overflow-hidden bg-gradient-to-br from-cyan-100 via-sky-100 to-blue-100 text-cyan-800",
+>>>>>>> 073870c49c37e40a684fe502677b2ae29c3050be
         className,
       )}
     >

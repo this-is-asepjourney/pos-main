@@ -84,15 +84,24 @@ export default function DashboardPage() {
                   <AreaChart data={revenueData}>
                     <defs>
                       <linearGradient id="revenue" x1="0" x2="0" y1="0" y2="1">
+<<<<<<< HEAD
                         <stop offset="5%" stopColor="#ff9d23" stopOpacity={0.35} />
                         <stop offset="95%" stopColor="#ff9d23" stopOpacity={0} />
+=======
+                        <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.35} />
+                        <stop offset="95%" stopColor="#06b6d4" stopOpacity={0} />
+>>>>>>> 073870c49c37e40a684fe502677b2ae29c3050be
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} />
                     <XAxis dataKey="name" tickLine={false} axisLine={false} />
                     <YAxis tickLine={false} axisLine={false} tickFormatter={(value) => `${Number(value) / 1000}k`} />
                     <Tooltip formatter={(value) => formatCurrency(Number(value))} />
+<<<<<<< HEAD
                     <Area type="monotone" dataKey="revenue" stroke="#cc7008" fill="url(#revenue)" strokeWidth={3} />
+=======
+                    <Area type="monotone" dataKey="revenue" stroke="#0891b2" fill="url(#revenue)" strokeWidth={3} />
+>>>>>>> 073870c49c37e40a684fe502677b2ae29c3050be
                   </AreaChart>
                 </ResponsiveContainer>
               ) : (
@@ -114,7 +123,11 @@ export default function DashboardPage() {
                     <XAxis type="number" hide />
                     <YAxis dataKey="name" type="category" width={110} tickLine={false} axisLine={false} />
                     <Tooltip formatter={(value) => `${value} item`} />
+<<<<<<< HEAD
                     <Bar dataKey="qty" fill="#5b7e3c" radius={[0, 10, 10, 0]} />
+=======
+                    <Bar dataKey="qty" fill="#0f172a" radius={[0, 10, 10, 0]} />
+>>>>>>> 073870c49c37e40a684fe502677b2ae29c3050be
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
@@ -126,6 +139,7 @@ export default function DashboardPage() {
 
         <section className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm">
           <h2 className="text-xl font-black text-slate-950">Transaksi terbaru</h2>
+<<<<<<< HEAD
           <div className="mt-4 space-y-3 md:hidden">
             {(stats?.recentTransactions ?? []).map((transaction) => (
               <div key={transaction.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
@@ -149,6 +163,9 @@ export default function DashboardPage() {
             ) : null}
           </div>
           <div className="mt-4 hidden overflow-x-auto md:block">
+=======
+          <div className="mt-4 overflow-x-auto">
+>>>>>>> 073870c49c37e40a684fe502677b2ae29c3050be
             <table className="w-full min-w-[720px] text-left text-sm">
               <thead className="text-xs uppercase tracking-[0.16em] text-slate-400">
                 <tr>

@@ -11,7 +11,11 @@
 
 ## Generated Fields
 
+<<<<<<< HEAD
 SQL Connect auto-generates fields for each `@table` type:
+=======
+Data Connect auto-generates fields for each `@table` type:
+>>>>>>> 073870c49c37e40a684fe502677b2ae29c3050be
 
 | Generated Field | Purpose | Example |
 |-----------------|---------|---------|
@@ -36,6 +40,7 @@ For many-to-many via `MovieActor`:
 
 ---
 
+<<<<<<< HEAD
 ## Referencing Generated GraphQL Schema
 
 **Do not guess** available queries or mutations. Review the generated schema files instead of trying to deduce them from the data model.
@@ -46,6 +51,8 @@ For many-to-many via `MovieActor`:
 
 ---
 
+=======
+>>>>>>> 073870c49c37e40a684fe502677b2ae29c3050be
 ## Queries
 
 ### Basic Query
@@ -150,6 +157,7 @@ query MoviesByDirector($director: String!) @auth(level: PUBLIC) {
     movieMetadata_on_movie: { director: { eq: $director }}
   }) { id title }
 }
+<<<<<<< HEAD
 
 # Filter by null relationship (e.g., top-level categories with no parent)
 # Use the generated foreign key field (e.g., parentId)
@@ -159,6 +167,8 @@ query TopLevelCategories @auth(level: PUBLIC) {
     name
   }
 }
+=======
+>>>>>>> 073870c49c37e40a684fe502677b2ae29c3050be
 ```
 
 ### Aliases

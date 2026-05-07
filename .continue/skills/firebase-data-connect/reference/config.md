@@ -29,7 +29,11 @@ project-root/
 
 ## dataconnect.yaml
 
+<<<<<<< HEAD
 Main SQL Connect service configuration:
+=======
+Main Data Connect service configuration:
+>>>>>>> 073870c49c37e40a684fe502677b2ae29c3050be
 
 ```yaml
 specVersion: "v1"
@@ -99,7 +103,11 @@ generate:
 
 ## Firebase CLI Commands
 
+<<<<<<< HEAD
 ### Initialize SQL Connect
+=======
+### Initialize Data Connect
+>>>>>>> 073870c49c37e40a684fe502677b2ae29c3050be
 
 ```bash
 # Interactive setup
@@ -139,7 +147,11 @@ npx -y firebase-tools@latest dataconnect:sql:migrate
 ### Deployment
 
 ```bash
+<<<<<<< HEAD
 # Deploy SQL Connect service
+=======
+# Deploy Data Connect service
+>>>>>>> 073870c49c37e40a684fe502677b2ae29c3050be
 npx -y firebase-tools@latest deploy --only dataconnect
 
 # Deploy specific connector
@@ -160,7 +172,11 @@ npx -y firebase-tools@latest emulators:start --only dataconnect
 ```
 
 Default ports:
+<<<<<<< HEAD
 - SQL Connect: `9399`
+=======
+- Data Connect: `9399`
+>>>>>>> 073870c49c37e40a684fe502677b2ae29c3050be
 - PostgreSQL: `9939` (local PostgreSQL instance)
 
 ### Emulator Configuration (firebase.json)
@@ -216,7 +232,11 @@ npx -y firebase-tools@latest emulators:start --only dataconnect --import=./seed-
 
 ### Schema Migrations
 
+<<<<<<< HEAD
 SQL Connect auto-generates PostgreSQL migrations:
+=======
+Data Connect auto-generates PostgreSQL migrations:
+>>>>>>> 073870c49c37e40a684fe502677b2ae29c3050be
 
 ```bash
 # Preview migration
@@ -242,7 +262,11 @@ Use `--force` flag to acknowledge breaking changes during deploy.
 
 ```yaml
 # GitHub Actions example
+<<<<<<< HEAD
 - name: Deploy SQL Connect
+=======
+- name: Deploy Data Connect
+>>>>>>> 073870c49c37e40a684fe502677b2ae29c3050be
   run: |
     npx -y firebase-tools@latest deploy --only dataconnect --token ${{ secrets.FIREBASE_TOKEN }} --force
 ```
@@ -251,7 +275,11 @@ Use `--force` flag to acknowledge breaking changes during deploy.
 
 ## VS Code Extension
 
+<<<<<<< HEAD
 Install "Firebase SQL Connect" extension for:
+=======
+Install "Firebase Data Connect" extension for:
+>>>>>>> 073870c49c37e40a684fe502677b2ae29c3050be
 - Schema intellisense and validation
 - GraphQL operation testing
 - Emulator integration

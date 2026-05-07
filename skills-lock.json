@@ -47,25 +47,41 @@
       "source": "firebase/agent-skills",
       "sourceType": "github",
       "skillPath": "skills/firebase-basics/SKILL.md",
+<<<<<<< HEAD
       "computedHash": "871b4fff9692faa25d6c9b96b8f7c2c5ea53be778bca2b702dd82ceeb8b1b272"
+=======
+      "computedHash": "c4ab39910ea78bfb05d7e05f172600219f98b2e809d6c245292bb2c92a46e08b"
+>>>>>>> 073870c49c37e40a684fe502677b2ae29c3050be
     },
     "firebase-crashlytics": {
       "source": "firebase/agent-skills",
       "sourceType": "github",
       "skillPath": "skills/firebase-crashlytics/SKILL.md",
+<<<<<<< HEAD
       "computedHash": "e40f0b599853b0512d023306b23bfbcc39c911ff61d5f0f084cab2bce234480a"
+=======
+      "computedHash": "516107bf025c38a3d374db5345aee0c082ef594591d77e022bd342203111a716"
+>>>>>>> 073870c49c37e40a684fe502677b2ae29c3050be
     },
     "firebase-data-connect": {
       "source": "firebase/agent-skills",
       "sourceType": "github",
       "skillPath": "skills/firebase-data-connect-basics/SKILL.md",
+<<<<<<< HEAD
       "computedHash": "506bd68146e316f296df2dd02d90aa90542584b6b131f4003447d7716155dcdd"
+=======
+      "computedHash": "3846924ba4a091fca5797b1c4882963867f43558692704ab240a46a54b37f7ef"
+>>>>>>> 073870c49c37e40a684fe502677b2ae29c3050be
     },
     "firebase-firestore": {
       "source": "firebase/agent-skills",
       "sourceType": "github",
       "skillPath": "skills/firebase-firestore/SKILL.md",
+<<<<<<< HEAD
       "computedHash": "49c006657db7ef1cbf6af6eb8d49c16a5a3ca7806c52e894ce0b3918d4a58ea3"
+=======
+      "computedHash": "be164bf442cf6cadd24b25e5a2db7e8ba5413837e5ba634a231bf7700a7c0e0a"
+>>>>>>> 073870c49c37e40a684fe502677b2ae29c3050be
     },
     "firebase-firestore-enterprise-native-mode": {
       "source": "firebase/agent-skills",

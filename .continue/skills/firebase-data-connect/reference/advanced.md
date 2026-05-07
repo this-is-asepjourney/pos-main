@@ -44,7 +44,11 @@ mutation CreateMovieWithEmbedding($title: String!, $description: String!)
 
 ### Similarity Search Query
 
+<<<<<<< HEAD
 SQL Connect generates `_similarity` fields for Vector columns:
+=======
+Data Connect generates `_similarity` fields for Vector columns:
+>>>>>>> 073870c49c37e40a684fe502677b2ae29c3050be
 
 ```graphql
 query SearchMovies($query: String!) @auth(level: PUBLIC) {
@@ -109,7 +113,11 @@ type Movie @table {
 
 ### Search Query
 
+<<<<<<< HEAD
 SQL Connect generates `_search` fields:
+=======
+Data Connect generates `_search` fields:
+>>>>>>> 073870c49c37e40a684fe502677b2ae29c3050be
 
 ```graphql
 query SearchMovies($query: String!) @auth(level: PUBLIC) {
@@ -167,7 +175,11 @@ export const onUserCreate = onMutationExecuted(
     service: "myService",
     connector: "default",
     operation: "CreateUser",
+<<<<<<< HEAD
     region: "us-central1"  # Must match SQL Connect location
+=======
+    region: "us-central1"  // Must match Data Connect location
+>>>>>>> 073870c49c37e40a684fe502677b2ae29c3050be
   },
   (event) => {
     const variables = event.data.payload.variables;

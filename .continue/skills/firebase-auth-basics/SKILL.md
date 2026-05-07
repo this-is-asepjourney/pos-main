@@ -66,11 +66,14 @@ Configure Firebase Authentication in `firebase.json` by adding an 'auth' block:
 }
 ```
 
+<<<<<<< HEAD
 **CRITICAL**: After configuring `firebase.json`, you MUST deploy the auth configuration to the Firebase backend for the changes to take effect. This is essential for auth providers like Google Sign-In, email/password, etc. to auto-generate the necessary OAuth clients for your app platforms. Run:
 ```bash
 npx -y firebase-tools@latest deploy --only auth
 ```
 
+=======
+>>>>>>> 073870c49c37e40a684fe502677b2ae29c3050be
 #### Option 2. Enabling Authentication in Console
 
 Enable other providers in the Firebase Console.
@@ -84,11 +87,14 @@ Enable other providers in the Firebase Console.
 **Web**
 See [references/client_sdk_web.md](references/client_sdk_web.md).
 
+<<<<<<< HEAD
 **Flutter**
 See [references/flutter_setup.md](references/flutter_setup.md).
 **Android (Kotlin)**
 See [references/client_sdk_android.md](references/client_sdk_android.md).
 
+=======
+>>>>>>> 073870c49c37e40a684fe502677b2ae29c3050be
 ### 3. Security Rules
 
 Secure your data using `request.auth` in Firestore/Storage rules.

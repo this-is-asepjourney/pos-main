@@ -1,6 +1,9 @@
 @import "tailwindcss";
 
+<<<<<<< HEAD
 /* Brand palette: #5B7E3C #FFD65A #FF9D23 #EA5252 */
+=======
+>>>>>>> 073870c49c37e40a684fe502677b2ae29c3050be
 :root {
   --background: #f8fafc;
   --foreground: #0f172a;
@@ -11,6 +14,7 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+<<<<<<< HEAD
 
   /* Primary green — #5B7E3C */
   --color-emerald-50: #f4f7f2;
@@ -75,6 +79,12 @@ body {
     rgb(244 247 242),
     var(--background)
   );
+=======
+}
+
+body {
+  background: radial-gradient(ellipse 100% 80% at 50% -30%, rgb(236, 253, 245), var(--background));
+>>>>>>> 073870c49c37e40a684fe502677b2ae29c3050be
   color: var(--foreground);
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
 }
@@ -95,6 +105,10 @@ button:disabled {
 }
 
 ::selection {
+<<<<<<< HEAD
   background: #ccdcc4;
+=======
+  background: #a7f3d0;
+>>>>>>> 073870c49c37e40a684fe502677b2ae29c3050be
   color: #0f172a;
 }

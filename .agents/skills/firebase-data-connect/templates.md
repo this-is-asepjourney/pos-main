@@ -1,6 +1,10 @@
 # Templates
 
+<<<<<<< HEAD
 Ready-to-use templates for common Firebase SQL Connect patterns.
+=======
+Ready-to-use templates for common Firebase Data Connect patterns.
+>>>>>>> 073870c49c37e40a684fe502677b2ae29c3050be
 
 ---
 
@@ -212,7 +216,11 @@ generate:
 ## Firebase Init Commands
 
 ```bash
+<<<<<<< HEAD
 # Initialize SQL Connect in project
+=======
+# Initialize Data Connect in project
+>>>>>>> 073870c49c37e40a684fe502677b2ae29c3050be
 npx -y firebase-tools@latest init dataconnect
 
 # Initialize with specific project
@@ -267,6 +275,7 @@ console.log(data.items);
 // Create item (requires auth)
 await createItem({ name: 'New Item', description: 'Description' });
 ```
+<<<<<<< HEAD
 
 ---
 
@@ -316,3 +325,5 @@ const unsubscribe = subscribe(liveDashboardRef(), {
 // Cleanup when done
 // unsubscribe();
 ```
+=======
+>>>>>>> 073870c49c37e40a684fe502677b2ae29c3050be

@@ -78,4 +78,8 @@ When using the `xcode-project-setup` skills, the above two steps will be done as
 
 ### Optional: Add custom debugging information
 
+<<<<<<< HEAD
 Customize reports to help you better understand what's happening in your app and the circumstances around events reported to Crashlytics. See [Customize Crash Reports for Apple Platforms](https://firebase.google.com/docs/crashlytics/ios/customize-crash-reports.md).
+=======
+Customize reports to help you better understand what's happening in your app and the circumstances around events reported to Crashlytics. See [Customize Crash Reports for Apple Platforms](https://firebase.google.com/docs/crashlytics/ios/customize-crash-reports).
+>>>>>>> 073870c49c37e40a684fe502677b2ae29c3050be

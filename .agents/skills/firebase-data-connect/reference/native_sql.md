@@ -8,7 +8,11 @@ When generating Native SQL operations, you are bypassing GraphQL and talking dir
 
 1.  **Operation Syntax Isolation:** Never mix Native SQL positional parameters (`$1`) with standard GraphQL named variables (`$id`). The `sql:` argument MUST be a hardcoded string literal block (`"""SELECT..."""`), not a GraphQL variable.
 2.  **Table & Column Mapping (Case Sensitivity):**
+<<<<<<< HEAD
     *   **Default `snake_case` Conversion:** By default, SQL Connect converts `PascalCase` types and `camelCase` fields to `snake_case` in the database.
+=======
+    *   **Default `snake_case` Conversion:** By default, FDC converts `PascalCase` types and `camelCase` fields to `snake_case` in the database.
+>>>>>>> 073870c49c37e40a684fe502677b2ae29c3050be
         *   *Schema:* `type UserProfile { releaseYear: Int }` -> *Native SQL:* `SELECT release_year FROM user_profile`
     *   **Explicit Overrides (Requires Double Quotes):** If the schema uses `@table(name: "ExactName")` or `@col(name: "ExactCol")`, you **MUST wrap the identifier in double quotes** if it contains capital letters (e.g., `SELECT * FROM "ExactName"`). Without quotes, Postgres folds it to lowercase and fails validation.
 
@@ -25,9 +29,15 @@ Native SQL enforces strict parsing rules to ensure security and prevent SQL inje
 
 ## Native SQL Root Fields
 
+<<<<<<< HEAD
 Operations are executed using the permissions granted to the SQL Connect service account. You can alias the root field (e.g., `movies: _select`) to make the client response cleaner (`data.movies` instead of `data._select`).
 
 > **Note on `Any` Return Types:** Because Native SQL completely bypasses GraphQL's strong typing, queries like `_select` and `_executeReturning` return the generic `Any` scalar type. The generated client SDKs (TypeScript, Swift, Kotlin, Dart) will type this as `any` (or equivalent). **AGENT INSTRUCTION**: When you generate client-side code that consumes these operations, you MUST manually cast or validate the shape of the data, as the typical type safety of SQL Connect will not be present.
+=======
+Operations are executed using the permissions granted to the Data Connect service account. You can alias the root field (e.g., `movies: _select`) to make the client response cleaner (`data.movies` instead of `data._select`).
+
+> **Note on `Any` Return Types:** Because Native SQL completely bypasses GraphQL's strong typing, queries like `_select` and `_executeReturning` return the generic `Any` scalar type. The generated client SDKs (TypeScript, Swift, Kotlin, Dart) will type this as `any` (or equivalent). **AGENT INSTRUCTION**: When you generate client-side code that consumes these operations, you MUST manually cast or validate the shape of the data, as the typical type safety of Data Connect will not be present.
+>>>>>>> 073870c49c37e40a684fe502677b2ae29c3050be
 
 Use these root fields in `query` or `mutation` operations:
 
@@ -97,7 +107,11 @@ Native SQL allows you to directly query and utilize PostgreSQL extensions, such 
 
 ## ⚠️ Security: Stored Procedures & Dynamic SQL
 
+<<<<<<< HEAD
 SQL Connect parameterizes inputs at the GraphQL boundary automatically. However, if your Native SQL calls **custom PL/pgSQL stored procedures**, you must manually prevent 2nd-order SQL injection:
+=======
+Data Connect parameterizes inputs at the GraphQL boundary automatically. However, if your Native SQL calls **custom PL/pgSQL stored procedures**, you must manually prevent 2nd-order SQL injection:
+>>>>>>> 073870c49c37e40a684fe502677b2ae29c3050be
 
 *   **NEVER** concatenate user input into an `EXECUTE` string (`EXECUTE 'UPDATE ' || table || ' SET x=' || val;`).
 *   **DO** use the `USING` clause to bind data values safely.

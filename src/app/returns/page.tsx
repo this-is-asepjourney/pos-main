@@ -4,7 +4,11 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { CalendarClock, Search, Undo2 } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { formatCurrency, formatDateTime, formatShortDate } from "@/lib/format";
+<<<<<<< HEAD
 import { calculateLateFee, lateDaysFromActualReturn } from "@/lib/rental";
+=======
+import { lateDaysFromActualReturn } from "@/lib/rental";
+>>>>>>> 073870c49c37e40a684fe502677b2ae29c3050be
 import {
   processReturnTransaction,
   resolveRentalStatus,
@@ -52,6 +56,7 @@ export default function ReturnsPage() {
       const baseTotalPrice =
         Number(active.baseTotalPrice ?? 0) ||
         Math.max(0, Number(active.totalPrice ?? 0) - Number(active.lateFeeAmount ?? 0));
+<<<<<<< HEAD
       const estimatedLateFee = calculateLateFee(
         active.items.map((item) => ({
           productId: item.productId,
@@ -80,6 +85,19 @@ export default function ReturnsPage() {
         paidBefore,
         paidAfter,
         remainingAfter,
+=======
+      const currentLate = Number(active.lateFeeAmount ?? 0);
+      const oldTotal = Number(active.totalPrice ?? 0);
+      const paidBefore = Number(active.paidAmount ?? 0);
+      const paidAfter = paidBefore + additionalPaidAmount;
+      return {
+        lateDays,
+        baseTotalPrice,
+        currentLate,
+        oldTotal,
+        paidBefore,
+        paidAfter,
+>>>>>>> 073870c49c37e40a684fe502677b2ae29c3050be
       };
     } catch {
       return null;
@@ -89,12 +107,15 @@ export default function ReturnsPage() {
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     if (!active) return;
+<<<<<<< HEAD
     if (preview && preview.remainingAfter > 0) {
       setMessage(
         `Pembayaran belum lunas. Tambahkan minimal ${formatCurrency(preview.remainingAfter)} sebelum proses pengembalian.`,
       );
       return;
     }
+=======
+>>>>>>> 073870c49c37e40a684fe502677b2ae29c3050be
 
     setSaving(true);
     setMessage("");
@@ -123,7 +144,11 @@ export default function ReturnsPage() {
 
   return (
     <AppShell allowedRoles={["admin", "cashier"]}>
+<<<<<<< HEAD
       <div className="grid gap-6 p-4 xl:grid-cols-1 2xl:grid-cols-2 xl:p-6">
+=======
+      <div className="grid gap-6 p-4 xl:grid-cols-[1fr_420px] xl:p-6">
+>>>>>>> 073870c49c37e40a684fe502677b2ae29c3050be
         <section className="space-y-5">
           <header className="rounded-[2rem] bg-white p-6 shadow-sm">
             <p className="flex items-center gap-2 text-sm font-bold uppercase tracking-[0.18em] text-emerald-700">
@@ -202,6 +227,7 @@ export default function ReturnsPage() {
               )}
             </div>
           </section>
+<<<<<<< HEAD
 
           <section className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm">
             <div className="mb-4 flex items-end justify-between gap-3">
@@ -262,33 +288,63 @@ export default function ReturnsPage() {
                 <h2 className="text-2xl font-black tracking-tight">{active?.invoiceCode ?? "Belum dipilih"}</h2>
               </div>
               <span className="flex size-12 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
+=======
+        </section>
+
+        <aside className="xl:sticky xl:top-6 xl:h-[calc(100vh-3rem)]">
+          <section className="flex h-full flex-col rounded-[2rem] bg-slate-950 p-5 text-white shadow-2xl shadow-slate-950/20">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-sm text-slate-400">Form pengembalian</p>
+                <h2 className="text-2xl font-black tracking-tight">{active?.invoiceCode ?? "Belum dipilih"}</h2>
+              </div>
+              <span className="flex size-12 items-center justify-center rounded-2xl bg-emerald-400 text-slate-950">
+>>>>>>> 073870c49c37e40a684fe502677b2ae29c3050be
                 <CalendarClock size={23} />
               </span>
             </div>
 
             {message ? (
+<<<<<<< HEAD
               <div className="mt-5 rounded-2xl bg-emerald-50 p-3 text-sm font-semibold text-emerald-700">
+=======
+              <div className="mt-5 rounded-2xl bg-emerald-400/10 p-3 text-sm font-semibold text-emerald-100">
+>>>>>>> 073870c49c37e40a684fe502677b2ae29c3050be
                 {message}
               </div>
             ) : null}
 
             {active ? (
+<<<<<<< HEAD
               <form onSubmit={handleSubmit} className="mt-5 space-y-4 2xl:min-h-0 2xl:flex-1 2xl:overflow-y-auto 2xl:pr-1">
                 <label className="block">
                   <span className="text-xs font-bold uppercase tracking-[0.16em] text-slate-500">
+=======
+              <form onSubmit={handleSubmit} className="mt-5 space-y-4">
+                <label className="block">
+                  <span className="text-xs font-bold uppercase tracking-[0.16em] text-emerald-100/80">
+>>>>>>> 073870c49c37e40a684fe502677b2ae29c3050be
                     Tanggal kembali aktual
                   </span>
                   <input
                     type="date"
                     value={actualReturnDate}
                     onChange={(event) => setActualReturnDate(event.target.value)}
+<<<<<<< HEAD
                     className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 font-bold text-slate-900 outline-none focus:border-emerald-300"
+=======
+                    className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 font-bold text-white outline-none focus:border-emerald-300"
+>>>>>>> 073870c49c37e40a684fe502677b2ae29c3050be
                     required
                   />
                 </label>
 
                 <label className="block">
+<<<<<<< HEAD
                   <span className="text-xs font-bold uppercase tracking-[0.16em] text-slate-500">
+=======
+                  <span className="text-xs font-bold uppercase tracking-[0.16em] text-emerald-100/80">
+>>>>>>> 073870c49c37e40a684fe502677b2ae29c3050be
                     Pembayaran tambahan saat kembali
                   </span>
                   <input
@@ -296,47 +352,79 @@ export default function ReturnsPage() {
                     min={0}
                     value={additionalPaidAmount || ""}
                     onChange={(event) => setAdditionalPaidAmount(Math.max(0, Number(event.target.value) || 0))}
+<<<<<<< HEAD
                     className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 font-bold text-slate-900 outline-none focus:border-emerald-300"
+=======
+                    className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 font-bold text-white outline-none focus:border-emerald-300"
+>>>>>>> 073870c49c37e40a684fe502677b2ae29c3050be
                   />
                 </label>
 
                 <label className="block">
+<<<<<<< HEAD
                   <span className="text-xs font-bold uppercase tracking-[0.16em] text-slate-500">
+=======
+                  <span className="text-xs font-bold uppercase tracking-[0.16em] text-emerald-100/80">
+>>>>>>> 073870c49c37e40a684fe502677b2ae29c3050be
                     Kondisi barang saat kembali
                   </span>
                   <input
                     value={returnCondition}
                     onChange={(event) => setReturnCondition(event.target.value)}
+<<<<<<< HEAD
                     className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 font-bold text-slate-900 outline-none focus:border-emerald-300"
+=======
+                    className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 font-bold text-white outline-none focus:border-emerald-300"
+>>>>>>> 073870c49c37e40a684fe502677b2ae29c3050be
                     placeholder="Contoh: baik / ada kerusakan kecil"
                   />
                 </label>
 
                 <label className="block">
+<<<<<<< HEAD
                   <span className="text-xs font-bold uppercase tracking-[0.16em] text-slate-500">
+=======
+                  <span className="text-xs font-bold uppercase tracking-[0.16em] text-emerald-100/80">
+>>>>>>> 073870c49c37e40a684fe502677b2ae29c3050be
                     Kelengkapan aksesori saat kembali
                   </span>
                   <input
                     value={returnAccessories}
                     onChange={(event) => setReturnAccessories(event.target.value)}
+<<<<<<< HEAD
                     className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 font-bold text-slate-900 outline-none focus:border-emerald-300"
+=======
+                    className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 font-bold text-white outline-none focus:border-emerald-300"
+>>>>>>> 073870c49c37e40a684fe502677b2ae29c3050be
                     placeholder="Contoh: pasak 8/10, cover ada"
                   />
                 </label>
 
                 <label className="block">
+<<<<<<< HEAD
                   <span className="text-xs font-bold uppercase tracking-[0.16em] text-slate-500">
+=======
+                  <span className="text-xs font-bold uppercase tracking-[0.16em] text-emerald-100/80">
+>>>>>>> 073870c49c37e40a684fe502677b2ae29c3050be
                     Foto / catatan dokumentasi
                   </span>
                   <input
                     value={returnPhotoNotes}
                     onChange={(event) => setReturnPhotoNotes(event.target.value)}
+<<<<<<< HEAD
                     className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 font-bold text-slate-900 outline-none focus:border-emerald-300"
+=======
+                    className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 font-bold text-white outline-none focus:border-emerald-300"
+>>>>>>> 073870c49c37e40a684fe502677b2ae29c3050be
                     placeholder="Contoh: foto sesudah return di galeri admin"
                   />
                 </label>
 
+<<<<<<< HEAD
                 <div className="space-y-2 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+=======
+                <div className="space-y-2 rounded-2xl bg-white p-4 text-slate-950">
+>>>>>>> 073870c49c37e40a684fe502677b2ae29c3050be
                   <div className="flex justify-between text-sm text-slate-500">
                     <span>Jatuh tempo</span>
                     <span>{active.returnDueDate ? formatShortDate(active.returnDueDate) : "-"}</span>
@@ -346,6 +434,7 @@ export default function ReturnsPage() {
                     <span>{preview?.lateDays ?? active.lateDays ?? 0} hari</span>
                   </div>
                   <div className="flex justify-between text-sm text-slate-500">
+<<<<<<< HEAD
                     <span>Total sewa dasar</span>
                     <span>{formatCurrency(preview?.baseTotalPrice ?? active.baseTotalPrice ?? active.totalPrice)}</span>
                   </div>
@@ -356,6 +445,10 @@ export default function ReturnsPage() {
                   <div className="flex justify-between text-sm text-slate-500">
                     <span>Total final setelah return</span>
                     <span>{formatCurrency(preview?.finalTotal ?? active.totalPrice)}</span>
+=======
+                    <span>Total saat ini</span>
+                    <span>{formatCurrency(preview?.oldTotal ?? active.totalPrice)}</span>
+>>>>>>> 073870c49c37e40a684fe502677b2ae29c3050be
                   </div>
                   <div className="flex justify-between text-sm text-slate-500">
                     <span>Dibayar sebelum proses</span>
@@ -366,13 +459,22 @@ export default function ReturnsPage() {
                     <span>{formatCurrency(preview?.paidAfter ?? active.paidAmount)}</span>
                   </div>
                   <div className="flex justify-between border-t border-slate-200 pt-2 text-sm font-black">
+<<<<<<< HEAD
                     <span>Sisa yang wajib dilunasi</span>
                     <span>
                       {formatCurrency(preview?.remainingAfter ?? 0)}
+=======
+                    <span>Sisa setelah proses</span>
+                    <span>
+                      {formatCurrency(
+                        Math.max(0, (preview?.oldTotal ?? active.totalPrice) - (preview?.paidAfter ?? active.paidAmount)),
+                      )}
+>>>>>>> 073870c49c37e40a684fe502677b2ae29c3050be
                     </span>
                   </div>
                 </div>
 
+<<<<<<< HEAD
                 <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
                   <p className="font-black">Regulasi denda pengembalian</p>
                   <ul className="mt-2 list-disc space-y-1 pl-5">
@@ -389,13 +491,22 @@ export default function ReturnsPage() {
                 <button
                   type="submit"
                   disabled={saving || Boolean(preview && preview.remainingAfter > 0)}
+=======
+                <button
+                  type="submit"
+                  disabled={saving}
+>>>>>>> 073870c49c37e40a684fe502677b2ae29c3050be
                   className="w-full rounded-2xl bg-emerald-400 px-5 py-4 text-base font-black text-slate-950 transition hover:bg-emerald-300 disabled:opacity-60"
                 >
                   {saving ? "Memproses..." : "Proses Pengembalian"}
                 </button>
               </form>
             ) : (
+<<<<<<< HEAD
               <div className="mt-8 rounded-3xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500">
+=======
+              <div className="mt-8 rounded-3xl border border-dashed border-white/15 p-8 text-center text-sm text-slate-400">
+>>>>>>> 073870c49c37e40a684fe502677b2ae29c3050be
                 Pilih transaksi sewa dari daftar untuk memproses pengembalian.
               </div>
             )}

@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { CalendarDays, Download, PencilLine, ReceiptText, Save, Search, X } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { formatCurrency, formatDateTime, formatShortDate, toDate } from "@/lib/format";
+<<<<<<< HEAD
 import { resolveRentalStatus, subscribeTransactions, updateTransaction } from "@/services/transaction-service";
 import type {
   PaymentMethod,
@@ -11,6 +12,10 @@ import type {
   RentalStatus,
   TransactionUpdateInput,
 } from "@/types/pos";
+=======
+import { subscribeTransactions, updateTransaction } from "@/services/transaction-service";
+import type { PaymentMethod, PosTransaction, TransactionUpdateInput } from "@/types/pos";
+>>>>>>> 073870c49c37e40a684fe502677b2ae29c3050be
 
 const paymentMethods: Array<{ value: PaymentMethod; label: string }> = [
   { value: "cash", label: "Cash" },
@@ -18,6 +23,7 @@ const paymentMethods: Array<{ value: PaymentMethod; label: string }> = [
   { value: "debit", label: "Debit" },
 ];
 
+<<<<<<< HEAD
 type TransactionStatusFilter = "all" | RentalStatus;
 
 const statusFilterOptions: Array<{ value: TransactionStatusFilter; label: string }> = [
@@ -43,6 +49,11 @@ export default function TransactionsPage() {
   const [transactions, setTransactions] = useState<PosTransaction[]>([]);
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<TransactionStatusFilter>("all");
+=======
+export default function TransactionsPage() {
+  const [transactions, setTransactions] = useState<PosTransaction[]>([]);
+  const [query, setQuery] = useState("");
+>>>>>>> 073870c49c37e40a684fe502677b2ae29c3050be
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -54,6 +65,7 @@ export default function TransactionsPage() {
 
   useEffect(() => subscribeTransactions(setTransactions, 100), []);
 
+<<<<<<< HEAD
   const transactionsWithStatus = useMemo(
     () =>
       transactions.map((transaction) => {
@@ -80,10 +92,27 @@ export default function TransactionsPage() {
   );
 
   const activeTransaction = filteredTransactions.find((transaction) => transaction.id === selectedId) ?? filteredTransactions[0] ?? null;
+=======
+  const filteredTransactions = useMemo(
+    () =>
+      transactions.filter((transaction) =>
+        `${transaction.invoiceCode} ${transaction.userName} ${transaction.paymentMethod}`
+          .toLowerCase()
+          .includes(query.toLowerCase()),
+      ),
+    [query, transactions],
+  );
+
+  const activeTransaction =
+    transactions.find((transaction) => transaction.id === selectedId) ??
+    filteredTransactions[0] ??
+    null;
+>>>>>>> 073870c49c37e40a684fe502677b2ae29c3050be
   const totalRevenue = filteredTransactions.reduce(
     (sum, transaction) => sum + transaction.totalPrice,
     0,
   );
+<<<<<<< HEAD
   const totalOverdue = filteredTransactions.filter(
     (transaction) => transaction.resolvedStatus === "overdue",
   ).length;
@@ -93,6 +122,8 @@ export default function TransactionsPage() {
   const totalReturned = filteredTransactions.filter(
     (transaction) => transaction.resolvedStatus === "returned",
   ).length;
+=======
+>>>>>>> 073870c49c37e40a684fe502677b2ae29c3050be
 
   const startEdit = () => {
     if (!activeTransaction) return;
@@ -222,7 +253,11 @@ export default function TransactionsPage() {
 
   return (
     <AppShell allowedRoles={["admin"]}>
+<<<<<<< HEAD
       <div className="grid gap-6 p-4 xl:grid-cols-1 2xl:grid-cols-[minmax(0,1fr)_400px] xl:p-6">
+=======
+      <div className="grid gap-6 p-4 xl:grid-cols-[1fr_420px] xl:p-6">
+>>>>>>> 073870c49c37e40a684fe502677b2ae29c3050be
         <section className="space-y-5">
           <header className="rounded-[2rem] bg-white p-6 shadow-sm">
             <p className="flex items-center gap-2 text-sm font-bold uppercase tracking-[0.18em] text-cyan-700">
@@ -264,12 +299,17 @@ export default function TransactionsPage() {
                   <input
                     value={query}
                     onChange={(event) => setQuery(event.target.value)}
+<<<<<<< HEAD
                     placeholder="Cari invoice / kasir / ID penyewa..."
+=======
+                    placeholder="Cari invoice / kasir..."
+>>>>>>> 073870c49c37e40a684fe502677b2ae29c3050be
                     className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 pl-11 pr-4 outline-none focus:border-cyan-300 lg:w-80"
                   />
                 </label>
               </div>
             </div>
+<<<<<<< HEAD
             <div className="mb-5 flex flex-wrap gap-2">
               {statusFilterOptions.map((option) => (
                 <button
@@ -300,6 +340,8 @@ export default function TransactionsPage() {
                 <p className="mt-1 text-xl font-black text-emerald-700">{totalReturned}</p>
               </div>
             </div>
+=======
+>>>>>>> 073870c49c37e40a684fe502677b2ae29c3050be
 
             <div className="space-y-3 md:hidden">
               {filteredTransactions.map((transaction) => (
@@ -325,6 +367,7 @@ export default function TransactionsPage() {
                   <div className="mt-3 grid grid-cols-2 gap-2 text-xs font-semibold text-slate-600">
                     <p>{formatDateTime(transaction.createdAt)}</p>
                     <p className="text-right uppercase">{transaction.paymentMethod}</p>
+<<<<<<< HEAD
                     <p
                       className={`inline-flex w-fit rounded-full px-2 py-1 text-[11px] font-black ${statusBadgeClass(
                         transaction.resolvedStatus,
@@ -346,21 +389,33 @@ export default function TransactionsPage() {
                         {transaction.renterIdNumber ?? "-"}
                       </p>
                     ) : null}
+=======
+                    <p className="col-span-2">
+                      {transaction.items.reduce((sum, item) => sum + item.qty, 0)} item
+                    </p>
+>>>>>>> 073870c49c37e40a684fe502677b2ae29c3050be
                   </div>
                 </button>
               ))}
             </div>
 
             <div className="hidden overflow-x-auto md:block">
+<<<<<<< HEAD
               <table className="w-full min-w-[1040px] text-left text-sm">
+=======
+              <table className="w-full min-w-[820px] text-left text-sm">
+>>>>>>> 073870c49c37e40a684fe502677b2ae29c3050be
                 <thead className="text-xs uppercase tracking-[0.16em] text-slate-400">
                   <tr>
                     <th className="py-3">Invoice</th>
                     <th>Kasir</th>
                     <th>Waktu</th>
+<<<<<<< HEAD
                     <th>Status</th>
                     <th>Jatuh tempo</th>
                     <th>ID penyewa</th>
+=======
+>>>>>>> 073870c49c37e40a684fe502677b2ae29c3050be
                     <th>Metode</th>
                     <th>Item</th>
                     <th className="text-right">Total</th>
@@ -380,6 +435,7 @@ export default function TransactionsPage() {
                       <td className="py-4 font-black text-slate-950">{transaction.invoiceCode}</td>
                       <td>{transaction.userName}</td>
                       <td>{formatDateTime(transaction.createdAt)}</td>
+<<<<<<< HEAD
                       <td>
                         <span
                           className={`inline-flex rounded-full px-3 py-1 text-xs font-black ${statusBadgeClass(
@@ -401,6 +457,8 @@ export default function TransactionsPage() {
                             }`
                           : "—"}
                       </td>
+=======
+>>>>>>> 073870c49c37e40a684fe502677b2ae29c3050be
                       <td className="uppercase">{transaction.paymentMethod}</td>
                       <td>{transaction.items.reduce((sum, item) => sum + item.qty, 0)}</td>
                       <td className="text-right font-black text-slate-950">
@@ -414,8 +472,13 @@ export default function TransactionsPage() {
           </section>
         </section>
 
+<<<<<<< HEAD
         <aside className="2xl:sticky 2xl:top-6">
           <section className="flex flex-col rounded-[2rem] bg-slate-950 p-5 text-white shadow-2xl shadow-slate-950/20 2xl:max-h-[calc(100vh-3rem)] 2xl:overflow-y-auto">
+=======
+        <aside className="xl:sticky xl:top-6 xl:h-[calc(100vh-3rem)]">
+          <section className="flex h-full flex-col rounded-[2rem] bg-slate-950 p-5 text-white shadow-2xl shadow-slate-950/20">
+>>>>>>> 073870c49c37e40a684fe502677b2ae29c3050be
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-sm text-slate-400">Detail invoice</p>
@@ -458,10 +521,13 @@ export default function TransactionsPage() {
                     <p className="mt-2 font-bold uppercase">{activeTransaction.paymentMethod}</p>
                   </div>
                   <div className="rounded-3xl bg-white/10 p-4">
+<<<<<<< HEAD
                     <p className="text-xs text-slate-400">Status</p>
                     <p className="mt-2 font-bold">{statusLabel(activeTransaction.resolvedStatus)}</p>
                   </div>
                   <div className="rounded-3xl bg-white/10 p-4">
+=======
+>>>>>>> 073870c49c37e40a684fe502677b2ae29c3050be
                     <p className="text-xs text-slate-400">Lama sewa</p>
                     <p className="mt-2 font-bold">{activeTransaction.rentalDays ?? "—"} hari</p>
                   </div>
@@ -586,7 +652,11 @@ export default function TransactionsPage() {
                   </form>
                 ) : null}
 
+<<<<<<< HEAD
                 <div className="mt-5 space-y-3">
+=======
+                <div className="mt-5 flex-1 space-y-3 overflow-y-auto">
+>>>>>>> 073870c49c37e40a684fe502677b2ae29c3050be
                   {activeTransaction.items.map((item) => (
                     <div key={`${activeTransaction.id}-${item.productId}`} className="rounded-3xl bg-white/8 p-4">
                       <div className="flex justify-between gap-3">

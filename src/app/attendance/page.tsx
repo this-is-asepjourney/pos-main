@@ -91,7 +91,11 @@ export default function AttendancePage() {
 
   return (
     <AppShell allowedRoles={["admin", "cashier"]}>
+<<<<<<< HEAD
       <div className="grid gap-6 p-4 xl:grid-cols-[380px_1fr] xl:p-6">
+=======
+      <div className="grid gap-6 p-4 xl:grid-cols-[420px_1fr] xl:p-6">
+>>>>>>> 073870c49c37e40a684fe502677b2ae29c3050be
         <section className="space-y-5">
           <header className="rounded-[2rem] bg-slate-950 p-6 text-white shadow-xl">
             <p className="flex items-center gap-2 text-sm font-bold uppercase tracking-[0.18em] text-cyan-200">
@@ -220,6 +224,7 @@ export default function AttendancePage() {
               </span>
             </div>
 
+<<<<<<< HEAD
             <div className="mt-5 space-y-3 md:hidden">
               {attendanceHistory.map((shift) => (
                 <div key={shift.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
@@ -253,6 +258,9 @@ export default function AttendancePage() {
             </div>
 
             <div className="mt-5 hidden overflow-x-auto md:block">
+=======
+            <div className="mt-5 overflow-x-auto">
+>>>>>>> 073870c49c37e40a684fe502677b2ae29c3050be
               <table className="w-full min-w-[760px] text-left text-sm">
                 <thead className="text-xs uppercase tracking-[0.16em] text-slate-400">
                   <tr>
