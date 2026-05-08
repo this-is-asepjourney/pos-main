@@ -134,9 +134,7 @@ export const demoTransactions: PosTransaction[] = [
     returnDueDate: "2026-05-01",
     firstDaySubtotal: 89000,
     multiDayExtraAmount: 0,
-    rentalSubtotalBeforeHoliday: 89000,
-    holidayMultiplier: 1,
-    yearEndHolidayApplied: false,
+
     renterIdType: "ktp",
     renterIdNumber: "3515****0000",
     baseTotalPrice: 89000,
@@ -196,9 +194,7 @@ export const demoTransactions: PosTransaction[] = [
     returnDueDate: "2026-05-03",
     firstDaySubtotal: 125000,
     multiDayExtraAmount: 150000,
-    rentalSubtotalBeforeHoliday: 275000,
-    holidayMultiplier: 1,
-    yearEndHolidayApplied: false,
+
     baseTotalPrice: 275000,
     lateDays: 0,
     lateFeeAmount: 0,

@@ -30,7 +30,7 @@ export function AppShell({ children, allowedRoles }: AppShellProps) {
 
   if (loading) {
     return (
-      <div className="grid min-h-screen place-items-center bg-slate-100">
+      <div className="grid min-h-screen place-items-center">
         <p className="text-sm font-semibold text-slate-500">Memuat sesi pengguna...</p>
       </div>
     );
@@ -38,7 +38,7 @@ export function AppShell({ children, allowedRoles }: AppShellProps) {
 
   if (isConfigured && !user) {
     return (
-      <div className="grid min-h-screen place-items-center bg-slate-100">
+      <div className="grid min-h-screen place-items-center">
         <p className="text-sm font-semibold text-slate-500">Mengalihkan ke halaman login...</p>
       </div>
     );
@@ -49,7 +49,7 @@ export function AppShell({ children, allowedRoles }: AppShellProps) {
   }
 
   return (
-    <div className="min-h-screen bg-slate-100 lg:flex">
+    <div className="min-h-screen lg:flex">
       <Navbar />
       <main className="min-w-0 flex-1">{children}</main>
     </div>

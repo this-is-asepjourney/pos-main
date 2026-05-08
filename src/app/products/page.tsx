@@ -504,11 +504,7 @@ export default function ProductsPage() {
   return (
     <AppShell allowedRoles={["admin"]}>
       <SuccessPopup message={successPopup} onClose={() => setSuccessPopup("")} />
-<<<<<<< HEAD
       <div className="grid gap-6 p-4 xl:grid-cols-[380px_1fr] xl:p-6">
-=======
-      <div className="grid gap-6 p-4 xl:grid-cols-[410px_1fr] xl:p-6">
->>>>>>> 073870c49c37e40a684fe502677b2ae29c3050be
         <section className="space-y-4">
           <div className="rounded-[2rem] bg-slate-950 p-6 text-white shadow-xl">
             <p className="flex items-center gap-2 text-sm font-bold uppercase tracking-[0.18em] text-cyan-200">
@@ -533,11 +529,7 @@ export default function ProductsPage() {
               className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none focus:border-cyan-300"
               required
             />
-<<<<<<< HEAD
             <div className="grid gap-3 sm:grid-cols-2">
-=======
-            <div className="grid grid-cols-2 gap-3">
->>>>>>> 073870c49c37e40a684fe502677b2ae29c3050be
               <input
                 value={form.specification ?? ""}
                 onChange={(event) =>
@@ -553,11 +545,7 @@ export default function ProductsPage() {
                 className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none focus:border-cyan-300"
               />
             </div>
-<<<<<<< HEAD
             <div className="grid gap-3 sm:grid-cols-2">
-=======
-            <div className="grid grid-cols-2 gap-3">
->>>>>>> 073870c49c37e40a684fe502677b2ae29c3050be
               <input
                 type="number"
                 min={0}
@@ -607,11 +595,7 @@ export default function ProductsPage() {
                 </span>
               </p>
             </div>
-<<<<<<< HEAD
             <div className="grid gap-3 sm:grid-cols-2">
-=======
-            <div className="grid grid-cols-2 gap-3">
->>>>>>> 073870c49c37e40a684fe502677b2ae29c3050be
               <input
                 value={form.sku ?? ""}
                 onChange={(event) => setForm((current) => ({ ...current, sku: event.target.value }))}
@@ -660,11 +644,7 @@ export default function ProductsPage() {
                 />
               ) : null}
             </div>
-<<<<<<< HEAD
             <div className="flex flex-wrap gap-2">
-=======
-            <div className="flex gap-2">
->>>>>>> 073870c49c37e40a684fe502677b2ae29c3050be
               <button
                 type="submit"
                 disabled={savingProduct}
@@ -735,11 +715,7 @@ export default function ProductsPage() {
             <p className="mt-1 text-xs font-semibold text-slate-500">
               Rekomendasi awal: Tenda, Carrier, Sepatu, Sleeping Set, Cooking Set, Perlampuan, Sekali Pakai.
             </p>
-<<<<<<< HEAD
             <div className="mt-4 flex flex-wrap gap-2">
-=======
-            <div className="mt-4 flex gap-2">
->>>>>>> 073870c49c37e40a684fe502677b2ae29c3050be
               <input
                 value={categoryName}
                 onChange={(event) => setCategoryName(event.target.value)}

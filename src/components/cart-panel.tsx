@@ -39,10 +39,6 @@ type CartPanelProps = {
   dateScheduleError: string;
   firstDaySubtotal: number;
   multiDayExtraAmount: number;
-  rentalSubtotalBeforeHoliday: number;
-  holidayMultiplier: number;
-  yearEndHolidayApplied: boolean;
-  yearEndHolidayNotice: string;
   mixedCategoryWarning: boolean;
   renterIdType: RenterIdType;
   renterIdNumber: string;
@@ -60,6 +56,10 @@ type CartPanelProps = {
   onDecrease: (productId: string) => void;
   onRemove: (productId: string) => void;
   onCheckout: () => void;
+  showPaymentFields?: boolean;
+  showOrderDetails?: boolean;
+  showDateInputs?: boolean;
+  showItemList?: boolean;
 };
 
 const paymentMethods: Array<{
@@ -143,10 +143,6 @@ export function CartPanel({
   dateScheduleError,
   firstDaySubtotal,
   multiDayExtraAmount,
-  rentalSubtotalBeforeHoliday,
-  holidayMultiplier,
-  yearEndHolidayApplied,
-  yearEndHolidayNotice,
   mixedCategoryWarning,
   renterIdType,
   renterIdNumber,
@@ -164,6 +160,10 @@ export function CartPanel({
   onDecrease,
   onRemove,
   onCheckout,
+  showPaymentFields = true,
+  showOrderDetails = true,
+  showDateInputs = true,
+  showItemList = true,
 }: CartPanelProps) {
   const parseInputNumber = (value: string) => {
     const parsed = Number(value);
@@ -222,12 +222,11 @@ export function CartPanel({
               {cart.length} jenis
             </span>
           </p>
-          {cart.length ? (
+          {showItemList ? (
+            cart.length ? (
             <ul className="space-y-3">
               {cart.map((item) => {
-                const lineRental = Math.round(
-                  computeRentalLineTotal(item.price, item.qty, rentalDays) * holidayMultiplier,
-                );
+                const lineRental = Math.round(computeRentalLineTotal(item.price, item.qty, rentalDays));
                 return (
                   <li
                     key={item.productId}
@@ -311,19 +310,13 @@ export function CartPanel({
                 Pilih alat di katalog. Harga tertera adalah tarif hari pertama per unit.
               </p>
             </div>
-          )}
+          )
+          ) : null}
         </div>
 
         {mixedCategoryWarning ? (
           <AlertBanner tone="amber" icon={AlertTriangle}>
-            Keranjang mencampur kategori dengan rumus denda berbeda (normal 20%/hari, perlampuan dihitung dari
-            50% dasar tarif, sekali pakai bebas). Total sudah dijumlahkan per barang.
-          </AlertBanner>
-        ) : null}
-
-        {yearEndHolidayApplied ? (
-          <AlertBanner tone="cyan" icon={CalendarDays}>
-            {yearEndHolidayNotice}
+            Keranjang mencampur kategori dengan rumus denda berbeda (normal 20%/hari, perlampuan 50%/hari, sekali pakai bebas). Total sudah dijumlahkan per barang.
           </AlertBanner>
         ) : null}
 
@@ -333,6 +326,7 @@ export function CartPanel({
           </AlertBanner>
         ) : null}
 
+        {showDateInputs && (
         <PanelSection
           icon={CalendarDays}
           title="Periode sewa"
@@ -375,85 +369,78 @@ export function CartPanel({
             ) : null}
           </div>
         </PanelSection>
+        )}
 
-        <PanelSection
-          icon={CalendarClock}
-          title="Checklist keluar barang"
-          subtitle="Dicatat saat checkout untuk bukti kondisi awal alat sewa."
-        >
-          <label className="block">
-            <span className="mb-1 text-xs font-bold text-slate-400">Kondisi barang saat keluar</span>
-            <input
-              value={checkoutCondition}
-              onChange={(event) => onCheckoutConditionChange(event.target.value)}
-              placeholder="Contoh: baik, ada gores halus"
-              className={inputClass}
-            />
-          </label>
-          <label className="mt-3 block">
-            <span className="mb-1 text-xs font-bold text-slate-400">Aksesori yang ikut</span>
-            <input
-              value={checkoutAccessories}
-              onChange={(event) => onCheckoutAccessoriesChange(event.target.value)}
-              placeholder="Contoh: pasak 10, rainfly, cover"
-              className={inputClass}
-            />
-          </label>
-          <label className="mt-3 block">
-            <span className="mb-1 text-xs font-bold text-slate-400">Foto / catatan dokumentasi</span>
-            <input
-              value={checkoutPhotoNotes}
-              onChange={(event) => onCheckoutPhotoNotesChange(event.target.value)}
-              placeholder="Contoh: foto sebelum sewa di galeri admin"
-              className={inputClass}
-            />
-          </label>
-        </PanelSection>
+        {showOrderDetails && (
+          <>
+            <PanelSection
+              icon={CalendarClock}
+              title="Checklist keluar barang"
+              subtitle="Dicatat saat checkout untuk bukti kondisi awal alat sewa."
+            >
+              <label className="block">
+                <span className="mb-1 text-xs font-bold text-slate-400">Kondisi barang saat keluar</span>
+                <input
+                  value={checkoutCondition}
+                  onChange={(event) => onCheckoutConditionChange(event.target.value)}
+                  placeholder="Contoh: baik, ada gores halus"
+                  className={inputClass}
+                />
+              </label>
+              <label className="mt-3 block">
+                <span className="mb-1 text-xs font-bold text-slate-400">Aksesori yang ikut</span>
+                <input
+                  value={checkoutAccessories}
+                  onChange={(event) => onCheckoutAccessoriesChange(event.target.value)}
+                  placeholder="Contoh: pasak 10, rainfly, cover"
+                  className={inputClass}
+                />
+              </label>
+              <label className="mt-3 block">
+                <span className="mb-1 text-xs font-bold text-slate-400">Foto / catatan dokumentasi</span>
+                <input
+                  value={checkoutPhotoNotes}
+                  onChange={(event) => onCheckoutPhotoNotesChange(event.target.value)}
+                  placeholder="Contoh: foto sebelum sewa di galeri admin"
+                  className={inputClass}
+                />
+              </label>
+            </PanelSection>
 
-        <PanelSection
-          icon={CalendarClock}
-          title="Pengembalian & denda"
-          subtitle="Denda keterlambatan diproses di menu Pengembalian setelah barang dikembalikan."
-        >
-          <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/5 px-3 py-3">
-            <p className="text-sm font-semibold text-emerald-100/95">
-              Checkout hanya mencatat sewa awal. Saat pengembalian, sistem menghitung telat dan denda otomatis
-              berdasarkan tanggal kembali aktual.
-            </p>
-          </div>
-        </PanelSection>
+            <PanelSection
+              icon={IdCard}
+              title="Identitas penyewa"
+              subtitle="Opsional. Isi jenis dan nomor sekaligus, cocok dengan ketentuan titip KTP/SIM."
+            >
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <label className="block">
+                  <span className="mb-1 text-xs font-bold text-slate-400">Jenis</span>
+                  <select
+                    value={renterIdType}
+                    onChange={(event) => onRenterIdTypeChange(event.target.value as RenterIdType)}
+                    className={clsx(inputClass, "cursor-pointer")}
+                  >
+                    <option value="">— tidak diisi —</option>
+                    <option value="ktp">KTP</option>
+                    <option value="sim">SIM</option>
+                  </select>
+                </label>
+                <label className="block">
+                  <span className="mb-1 text-xs font-bold text-slate-400">Nomor</span>
+                  <input
+                    type="text"
+                    value={renterIdNumber}
+                    onChange={(event) => onRenterIdNumberChange(event.target.value)}
+                    placeholder="Nomor identitas"
+                    className={clsx(inputClass, "mt-0")}
+                  />
+                </label>
+              </div>
+            </PanelSection>
+          </>
+        )}
 
-        <PanelSection
-          icon={IdCard}
-          title="Identitas penyewa"
-          subtitle="Opsional. Isi jenis dan nomor sekaligus, cocok dengan ketentuan titip KTP/SIM."
-        >
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <label className="block">
-              <span className="mb-1 text-xs font-bold text-slate-400">Jenis</span>
-              <select
-                value={renterIdType}
-                onChange={(event) => onRenterIdTypeChange(event.target.value as RenterIdType)}
-                className={clsx(inputClass, "cursor-pointer")}
-              >
-                <option value="">— tidak diisi —</option>
-                <option value="ktp">KTP</option>
-                <option value="sim">SIM</option>
-              </select>
-            </label>
-            <label className="block">
-              <span className="mb-1 text-xs font-bold text-slate-400">Nomor</span>
-              <input
-                type="text"
-                value={renterIdNumber}
-                onChange={(event) => onRenterIdNumberChange(event.target.value)}
-                placeholder="Nomor identitas"
-                className={clsx(inputClass, "mt-0")}
-              />
-            </label>
-          </div>
-        </PanelSection>
-
+        {showPaymentFields && (
         <PanelSection icon={Wallet} title="Pembayaran" subtitle="Pilih metode lalu sesuaikan nominal untuk tunai.">
           <div className="grid grid-cols-3 gap-2">
             {paymentMethods.map((method) => {
@@ -525,6 +512,7 @@ export function CartPanel({
             />
           </label>
         </PanelSection>
+        )}
       </div>
 
       <div className="shrink-0 space-y-4 border-t border-white/10 bg-slate-950/90 px-4 pb-5 pt-4 backdrop-blur-md">
@@ -544,16 +532,7 @@ export function CartPanel({
               <span>Tambahan hari 2+</span>
               <span className="font-semibold tabular-nums">{formatCurrency(multiDayExtraAmount)}</span>
             </div>
-            <div className="flex justify-between text-sm text-slate-600">
-              <span>Sebelum pengali libur</span>
-              <span className="font-semibold tabular-nums">{formatCurrency(rentalSubtotalBeforeHoliday)}</span>
-            </div>
-            {yearEndHolidayApplied ? (
-              <div className="flex justify-between text-sm font-bold text-amber-900">
-                <span>Pengali 28–31 Des</span>
-                <span className="tabular-nums">×{holidayMultiplier.toLocaleString("id-ID")}</span>
-              </div>
-            ) : null}
+
             <div className="flex justify-between border-t border-slate-200 pt-2 text-sm font-black text-slate-800">
               <span>Total sewa</span>
               <span className="tabular-nums">{formatCurrency(baseTotalPrice)}</span>
@@ -575,7 +554,7 @@ export function CartPanel({
 
         <button
           type="button"
-          disabled={!canCheckout}
+          disabled={showPaymentFields ? !canCheckout : cart.length === 0 || !!dateScheduleError || !pickupDate || !returnDueDate}
           onClick={onCheckout}
           className={clsx(
             "relative w-full overflow-hidden rounded-2xl px-5 py-4 text-base font-black transition",
@@ -584,7 +563,13 @@ export function CartPanel({
             "disabled:cursor-not-allowed disabled:opacity-45 disabled:shadow-none",
           )}
         >
-          <span className="relative z-10">{isCheckingOut ? "Memproses…" : "Selesaikan pembayaran"}</span>
+          <span className="relative z-10">
+            {isCheckingOut 
+              ? "Memproses…" 
+              : showPaymentFields 
+                ? "Selesaikan pembayaran" 
+                : "Lanjut ke Pembayaran"}
+          </span>
         </button>
       </div>
     </section>

@@ -28,19 +28,25 @@ export function Navbar() {
   };
 
   return (
-    <aside className="flex w-full flex-col gap-6 border-b border-white/10 bg-slate-950 px-4 py-4 text-white lg:min-h-screen lg:w-72 lg:border-b-0 lg:border-r lg:px-5">
-      <div className="flex items-center justify-between lg:block">
+    <aside className="sticky top-0 z-50 flex w-full flex-col bg-slate-950/95 text-white backdrop-blur-md lg:static lg:min-h-screen lg:w-72 lg:bg-slate-950 lg:backdrop-blur-none lg:border-r lg:border-white/10 lg:px-5 lg:py-6">
+      <div className="flex items-center justify-between border-b border-white/5 px-4 py-3 lg:block lg:border-none lg:p-0">
         <Link href="/" aria-label="JIROLU home">
           <BrandMark textClassName="text-white" />
         </Link>
-        {!isConfigured ? (
-          <span className="rounded-full border border-amber-300/30 bg-amber-300/10 px-3 py-1 text-xs font-semibold text-amber-200 lg:mt-5 lg:inline-block">
-            Demo mode
-          </span>
-        ) : null}
+        <div className="flex items-center gap-3 lg:hidden">
+          {!isConfigured && (
+            <span className="rounded-full bg-amber-400/20 px-2 py-0.5 text-[10px] font-bold text-amber-300 ring-1 ring-amber-400/30">
+              DEMO
+            </span>
+          )}
+          <div className="text-right">
+            <p className="text-xs font-bold leading-none">{displayName}</p>
+            <p className="mt-1 text-[10px] font-black uppercase tracking-wider text-emerald-400">{role}</p>
+          </div>
+        </div>
       </div>
 
-      <nav className="flex gap-2 overflow-x-auto lg:flex-col lg:overflow-visible">
+      <nav className="flex gap-1 overflow-x-auto p-2 scrollbar-hide lg:mt-4 lg:flex-col lg:gap-2 lg:overflow-visible lg:p-0">
         {navItems
           .filter((item) => item.roles.includes(role))
           .map((item) => {
@@ -51,44 +57,27 @@ export function Navbar() {
               key={item.href}
               href={item.href}
               className={clsx(
-                "flex min-w-max items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold transition",
+                "flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-semibold transition lg:rounded-2xl lg:py-3",
                 active
                   ? "bg-white text-slate-950 shadow-lg shadow-black/20"
-                  : "text-slate-300 hover:bg-white/10 hover:text-white",
+                  : "text-slate-400 hover:bg-white/5 hover:text-white",
               )}
             >
               <Icon size={18} />
-              {item.label}
+              <span className="min-w-max">{item.label}</span>
             </Link>
           );
         })}
       </nav>
 
-      <div className="rounded-2xl border border-white/10 bg-white/5 p-3 lg:hidden">
-        <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Operator</p>
-        <div className="mt-2 flex items-center justify-between gap-2">
-          <div>
-            <p className="text-sm font-semibold">{displayName}</p>
-            <p className="text-[11px] uppercase tracking-[0.16em] text-emerald-300">{role}</p>
-          </div>
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="rounded-xl bg-white/10 px-3 py-2 text-xs font-semibold text-slate-200"
-          >
-            Keluar
-          </button>
-        </div>
-      </div>
-
       <div className="mt-auto hidden rounded-3xl border border-white/10 bg-white/5 p-4 lg:block">
-        <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Operator</p>
-        <p className="mt-2 font-semibold">{displayName}</p>
-        <p className="mt-1 text-xs uppercase tracking-[0.18em] text-emerald-300">{role}</p>
+        <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Operator Aktif</p>
+        <p className="mt-2 font-black tracking-tight">{displayName}</p>
+        <p className="mt-1 text-xs font-black uppercase tracking-[0.18em] text-emerald-400">{role}</p>
         <button
           type="button"
           onClick={handleLogout}
-          className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-white/10 px-4 py-2 text-sm font-semibold text-slate-200 transition hover:bg-white/15"
+          className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-white/10 px-4 py-2.5 text-sm font-black text-slate-200 transition hover:bg-white/15"
         >
           <LogOut size={16} />
           Keluar

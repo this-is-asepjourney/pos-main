@@ -3,8 +3,7 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { CalendarDays, Download, PencilLine, ReceiptText, Save, Search, X } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
-import { formatCurrency, formatDateTime, formatShortDate, toDate } from "@/lib/format";
-<<<<<<< HEAD
+import { formatCurrency, formatDateTime, formatNumber, formatShortDate, toDate } from "@/lib/format";
 import { resolveRentalStatus, subscribeTransactions, updateTransaction } from "@/services/transaction-service";
 import type {
   PaymentMethod,
@@ -12,10 +11,6 @@ import type {
   RentalStatus,
   TransactionUpdateInput,
 } from "@/types/pos";
-=======
-import { subscribeTransactions, updateTransaction } from "@/services/transaction-service";
-import type { PaymentMethod, PosTransaction, TransactionUpdateInput } from "@/types/pos";
->>>>>>> 073870c49c37e40a684fe502677b2ae29c3050be
 
 const paymentMethods: Array<{ value: PaymentMethod; label: string }> = [
   { value: "cash", label: "Cash" },
@@ -23,7 +18,6 @@ const paymentMethods: Array<{ value: PaymentMethod; label: string }> = [
   { value: "debit", label: "Debit" },
 ];
 
-<<<<<<< HEAD
 type TransactionStatusFilter = "all" | RentalStatus;
 
 const statusFilterOptions: Array<{ value: TransactionStatusFilter; label: string }> = [
@@ -45,15 +39,16 @@ const statusBadgeClass = (status: RentalStatus) => {
   return "bg-amber-100 text-amber-700";
 };
 
+const paymentMethodLabel = (method: PaymentMethod) => {
+  if (method === "qris") return "QRIS";
+  if (method === "debit") return "Debit";
+  return "Cash";
+};
+
 export default function TransactionsPage() {
   const [transactions, setTransactions] = useState<PosTransaction[]>([]);
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<TransactionStatusFilter>("all");
-=======
-export default function TransactionsPage() {
-  const [transactions, setTransactions] = useState<PosTransaction[]>([]);
-  const [query, setQuery] = useState("");
->>>>>>> 073870c49c37e40a684fe502677b2ae29c3050be
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -65,7 +60,6 @@ export default function TransactionsPage() {
 
   useEffect(() => subscribeTransactions(setTransactions, 100), []);
 
-<<<<<<< HEAD
   const transactionsWithStatus = useMemo(
     () =>
       transactions.map((transaction) => {
@@ -92,27 +86,10 @@ export default function TransactionsPage() {
   );
 
   const activeTransaction = filteredTransactions.find((transaction) => transaction.id === selectedId) ?? filteredTransactions[0] ?? null;
-=======
-  const filteredTransactions = useMemo(
-    () =>
-      transactions.filter((transaction) =>
-        `${transaction.invoiceCode} ${transaction.userName} ${transaction.paymentMethod}`
-          .toLowerCase()
-          .includes(query.toLowerCase()),
-      ),
-    [query, transactions],
-  );
-
-  const activeTransaction =
-    transactions.find((transaction) => transaction.id === selectedId) ??
-    filteredTransactions[0] ??
-    null;
->>>>>>> 073870c49c37e40a684fe502677b2ae29c3050be
   const totalRevenue = filteredTransactions.reduce(
     (sum, transaction) => sum + transaction.totalPrice,
     0,
   );
-<<<<<<< HEAD
   const totalOverdue = filteredTransactions.filter(
     (transaction) => transaction.resolvedStatus === "overdue",
   ).length;
@@ -122,8 +99,6 @@ export default function TransactionsPage() {
   const totalReturned = filteredTransactions.filter(
     (transaction) => transaction.resolvedStatus === "returned",
   ).length;
-=======
->>>>>>> 073870c49c37e40a684fe502677b2ae29c3050be
 
   const startEdit = () => {
     if (!activeTransaction) return;
@@ -167,84 +142,200 @@ export default function TransactionsPage() {
 
     const xlsx = await import("xlsx");
     const exportedAt = new Date();
-    const summaryRows = filteredTransactions.map((transaction) => ({
+    const statusScopeLabel = statusFilterOptions.find((option) => option.value === statusFilter)?.label ?? "Semua";
+    const earliestDate = filteredTransactions.reduce<Date | null>((earliest, transaction) => {
+      const transactionDate = toDate(transaction.createdAt);
+      if (!earliest || transactionDate < earliest) return transactionDate;
+      return earliest;
+    }, null);
+    const latestDate = filteredTransactions.reduce<Date | null>((latest, transaction) => {
+      const transactionDate = toDate(transaction.createdAt);
+      if (!latest || transactionDate > latest) return transactionDate;
+      return latest;
+    }, null);
+
+    const totalItems = filteredTransactions.reduce(
+      (sum, transaction) => sum + transaction.items.reduce((itemSum, item) => itemSum + item.qty, 0),
+      0,
+    );
+    const totalLateFee = filteredTransactions.reduce((sum, transaction) => sum + (transaction.lateFeeAmount ?? 0), 0);
+    const totalPaid = filteredTransactions.reduce((sum, transaction) => sum + transaction.paidAmount, 0);
+    const avgTicket = filteredTransactions.length ? Math.round(totalRevenue / filteredTransactions.length) : 0;
+
+    const paymentSummaryRows = paymentMethods.map((method) => {
+      const matching = filteredTransactions.filter((transaction) => transaction.paymentMethod === method.value);
+      return {
+        METODE: method.label,
+        JUMLAH_TRANSAKSI: matching.length,
+        TOTAL_NILAI: matching.reduce((sum, transaction) => sum + transaction.totalPrice, 0),
+        RATA_RATA: matching.length
+          ? Math.round(matching.reduce((sum, transaction) => sum + transaction.totalPrice, 0) / matching.length)
+          : 0,
+      };
+    });
+
+    const cashierMap = new Map<string, { transaksi: number; nilai: number; item: number }>();
+    for (const transaction of filteredTransactions) {
+      const current = cashierMap.get(transaction.userName) ?? { transaksi: 0, nilai: 0, item: 0 };
+      current.transaksi += 1;
+      current.nilai += transaction.totalPrice;
+      current.item += transaction.items.reduce((sum, item) => sum + item.qty, 0);
+      cashierMap.set(transaction.userName, current);
+    }
+    const cashierRows = Array.from(cashierMap.entries())
+      .map(([kasir, stats]) => ({
+        KASIR: kasir,
+        JUMLAH_TRANSAKSI: stats.transaksi,
+        TOTAL_ITEM: stats.item,
+        TOTAL_NILAI: stats.nilai,
+        RATA_RATA_PER_TRANSAKSI: stats.transaksi ? Math.round(stats.nilai / stats.transaksi) : 0,
+      }))
+      .sort((a, b) => b.TOTAL_NILAI - a.TOTAL_NILAI);
+
+    const overviewSheet = xlsx.utils.aoa_to_sheet([
+      ["LAPORAN TRANSAKSI BRO POS"],
+      [],
+      ["Diekspor pada", formatDateTime(exportedAt)],
+      ["Filter status", statusScopeLabel],
+      ["Filter pencarian", query.trim() || "Semua transaksi"],
+      [
+        "Periode transaksi",
+        earliestDate && latestDate ? `${formatDateTime(earliestDate)} - ${formatDateTime(latestDate)}` : "-",
+      ],
+      [],
+      ["KPI UTAMA", "NILAI"],
+      ["Jumlah transaksi", formatNumber(filteredTransactions.length)],
+      ["Total item disewa", formatNumber(totalItems)],
+      ["Total pendapatan", formatCurrency(totalRevenue)],
+      ["Rata-rata transaksi", formatCurrency(avgTicket)],
+      ["Total denda", formatCurrency(totalLateFee)],
+      ["Total dibayar", formatCurrency(totalPaid)],
+      [],
+      ["STATUS", "JUMLAH"],
+      ["Sedang disewa", formatNumber(totalRented)],
+      ["Terlambat", formatNumber(totalOverdue)],
+      ["Sudah kembali", formatNumber(totalReturned)],
+    ]);
+    overviewSheet["!cols"] = [{ wch: 30 }, { wch: 50 }];
+
+    const transactionRows = filteredTransactions.map((transaction) => ({
       INVOICE: transaction.invoiceCode,
+      WAKTU: formatDateTime(transaction.createdAt),
       KASIR: transaction.userName,
-      WAKTU: toDate(transaction.createdAt),
-      METODE: transaction.paymentMethod.toUpperCase(),
-      ITEM: transaction.items.reduce((sum, item) => sum + item.qty, 0),
-      HARI_SEWA: transaction.rentalDays ?? "",
-      TGL_AMBIL: transaction.pickupDate ?? "",
-      TGL_KEMBALI_RENCANA: transaction.returnDueDate ?? "",
-      TGL_KEMBALI_AKTUAL: transaction.actualReturnDate ?? "",
-      ID_JENIS: transaction.renterIdType ?? "",
-      ID_NOMOR: transaction.renterIdNumber ?? "",
+      STATUS: statusLabel(transaction.resolvedStatus),
+      METODE_BAYAR: paymentMethodLabel(transaction.paymentMethod),
+      JUMLAH_ITEM: transaction.items.reduce((sum, item) => sum + item.qty, 0),
+      LAMA_SEWA_HARI: transaction.rentalDays ?? 0,
+      TANGGAL_AMBIL: transaction.pickupDate ?? "-",
+      TANGGAL_JATUH_TEMPO: transaction.returnDueDate ?? "-",
+      TANGGAL_KEMBALI_AKTUAL: transaction.actualReturnDate ?? "-",
+      IDENTITAS_PENYEWA: `${(transaction.renterIdType ?? "-").toUpperCase()} / ${transaction.renterIdNumber ?? "-"}`,
       HARI_TERLAMBAT: transaction.lateDays ?? 0,
       DENDA: transaction.lateFeeAmount ?? 0,
-      HARI1_SUBTOTAL: transaction.firstDaySubtotal ?? "",
-      TAMBAHAN_HARI: transaction.multiDayExtraAmount ?? "",
-      SUBTOTAL_SBLM_LIBUR: transaction.rentalSubtotalBeforeHoliday ?? "",
-      PENGALI_LIBUR: transaction.holidayMultiplier ?? "",
+      SUBTOTAL_HARI_1: transaction.firstDaySubtotal ?? 0,
+      TAMBAHAN_HARI_2PLUS: transaction.multiDayExtraAmount ?? 0,
+
       TOTAL_SEWA: transaction.baseTotalPrice ?? transaction.totalPrice,
       TOTAL_AKHIR: transaction.totalPrice,
       DIBAYAR: transaction.paidAmount,
       KEMBALIAN: transaction.changeAmount,
     }));
-    const detailRows = filteredTransactions.flatMap((transaction) =>
+    transactionRows.push({
+      INVOICE: "TOTAL",
+      WAKTU: "-",
+      KASIR: "-",
+      STATUS: "-",
+      METODE_BAYAR: "-",
+      JUMLAH_ITEM: totalItems,
+      LAMA_SEWA_HARI: 0,
+      TANGGAL_AMBIL: "-",
+      TANGGAL_JATUH_TEMPO: "-",
+      TANGGAL_KEMBALI_AKTUAL: "-",
+      IDENTITAS_PENYEWA: "-",
+      HARI_TERLAMBAT: filteredTransactions.reduce((sum, transaction) => sum + (transaction.lateDays ?? 0), 0),
+      DENDA: totalLateFee,
+      SUBTOTAL_HARI_1: filteredTransactions.reduce((sum, transaction) => sum + (transaction.firstDaySubtotal ?? 0), 0),
+      TAMBAHAN_HARI_2PLUS: filteredTransactions.reduce(
+        (sum, transaction) => sum + (transaction.multiDayExtraAmount ?? 0),
+        0,
+      ),
+
+      TOTAL_SEWA: filteredTransactions.reduce(
+        (sum, transaction) => sum + (transaction.baseTotalPrice ?? transaction.totalPrice),
+        0,
+      ),
+      TOTAL_AKHIR: totalRevenue,
+      DIBAYAR: totalPaid,
+      KEMBALIAN: filteredTransactions.reduce((sum, transaction) => sum + transaction.changeAmount, 0),
+    });
+    const transactionSheet = xlsx.utils.json_to_sheet(transactionRows);
+    transactionSheet["!autofilter"] = { ref: "A1:U1" };
+    transactionSheet["!cols"] = [
+      { wch: 21 },
+      { wch: 20 },
+      { wch: 20 },
+      { wch: 14 },
+      { wch: 14 },
+      { wch: 12 },
+      { wch: 14 },
+      { wch: 16 },
+      { wch: 20 },
+      { wch: 20 },
+      { wch: 24 },
+      { wch: 14 },
+      { wch: 12 },
+      { wch: 14 },
+      { wch: 16 },
+      { wch: 18 },
+      { wch: 14 },
+      { wch: 14 },
+    ];
+
+    const itemRows = filteredTransactions.flatMap((transaction) =>
       transaction.items.map((item) => ({
         INVOICE: transaction.invoiceCode,
-        WAKTU: toDate(transaction.createdAt),
+        WAKTU: formatDateTime(transaction.createdAt),
+        STATUS_TRANSAKSI: statusLabel(transaction.resolvedStatus),
         KASIR: transaction.userName,
-        METODE: transaction.paymentMethod.toUpperCase(),
+        METODE_BAYAR: paymentMethodLabel(transaction.paymentMethod),
         ALAT: item.name,
-        SPESIFIKASI: item.specification ?? "",
-        KETERANGAN: item.notes ?? "",
+        KATEGORI: item.categoryName ?? "-",
+        SPESIFIKASI: item.specification ?? "-",
+        KETERANGAN: item.notes ?? "-",
         QTY: item.qty,
-        TARIF_HARI1: item.price,
-        SUBTOTAL: item.subtotal,
+        TARIF_HARI_1: item.price,
+        SUBTOTAL_ITEM: item.subtotal,
       })),
     );
-
-    const summarySheet = xlsx.utils.json_to_sheet(summaryRows);
-    const detailSheet = xlsx.utils.json_to_sheet(detailRows);
-
-    summarySheet["!cols"] = [
+    const itemSheet = xlsx.utils.json_to_sheet(itemRows);
+    itemSheet["!autofilter"] = { ref: "A1:L1" };
+    itemSheet["!cols"] = [
+      { wch: 21 },
       { wch: 20 },
-      { wch: 22 },
+      { wch: 14 },
       { wch: 20 },
-      { wch: 10 },
-      { wch: 8 },
-      { wch: 12 },
-      { wch: 16 },
-      { wch: 16 },
-      { wch: 8 },
-      { wch: 12 },
-      { wch: 10 },
-      { wch: 10 },
-      { wch: 12 },
       { wch: 14 },
-      { wch: 12 },
-      { wch: 12 },
-      { wch: 14 },
-      { wch: 14 },
-      { wch: 14 },
-    ];
-    detailSheet["!cols"] = [
-      { wch: 22 },
-      { wch: 20 },
-      { wch: 24 },
-      { wch: 12 },
       { wch: 28 },
+      { wch: 18 },
+      { wch: 20 },
       { wch: 24 },
-      { wch: 24 },
-      { wch: 10 },
+      { wch: 8 },
       { wch: 14 },
       { wch: 14 },
     ];
+
+    const paymentSheet = xlsx.utils.json_to_sheet(paymentSummaryRows);
+    paymentSheet["!cols"] = [{ wch: 16 }, { wch: 18 }, { wch: 16 }, { wch: 16 }];
+
+    const cashierSheet = xlsx.utils.json_to_sheet(cashierRows);
+    cashierSheet["!cols"] = [{ wch: 24 }, { wch: 18 }, { wch: 12 }, { wch: 16 }, { wch: 22 }];
 
     const workbook = xlsx.utils.book_new();
-    xlsx.utils.book_append_sheet(workbook, summarySheet, "Ringkasan Transaksi");
-    xlsx.utils.book_append_sheet(workbook, detailSheet, "Detail Item");
+    xlsx.utils.book_append_sheet(workbook, overviewSheet, "01_Overview");
+    xlsx.utils.book_append_sheet(workbook, transactionSheet, "02_Transaksi_Lengkap");
+    xlsx.utils.book_append_sheet(workbook, itemSheet, "03_Detail_Item");
+    xlsx.utils.book_append_sheet(workbook, paymentSheet, "04_Ringkasan_Metode");
+    xlsx.utils.book_append_sheet(workbook, cashierSheet, "05_Performa_Kasir");
     xlsx.writeFile(
       workbook,
       `rekap-transaksi-bro-pos-${exportedAt.toISOString().slice(0, 10)}.xlsx`,
@@ -253,11 +344,7 @@ export default function TransactionsPage() {
 
   return (
     <AppShell allowedRoles={["admin"]}>
-<<<<<<< HEAD
-      <div className="grid gap-6 p-4 xl:grid-cols-1 2xl:grid-cols-[minmax(0,1fr)_400px] xl:p-6">
-=======
-      <div className="grid gap-6 p-4 xl:grid-cols-[1fr_420px] xl:p-6">
->>>>>>> 073870c49c37e40a684fe502677b2ae29c3050be
+      <div className="grid gap-6 p-4 lg:grid-cols-1 xl:grid-cols-[minmax(0,1fr)_400px] xl:p-6">
         <section className="space-y-5">
           <header className="rounded-[2rem] bg-white p-6 shadow-sm">
             <p className="flex items-center gap-2 text-sm font-bold uppercase tracking-[0.18em] text-cyan-700">
@@ -299,17 +386,12 @@ export default function TransactionsPage() {
                   <input
                     value={query}
                     onChange={(event) => setQuery(event.target.value)}
-<<<<<<< HEAD
                     placeholder="Cari invoice / kasir / ID penyewa..."
-=======
-                    placeholder="Cari invoice / kasir..."
->>>>>>> 073870c49c37e40a684fe502677b2ae29c3050be
                     className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 pl-11 pr-4 outline-none focus:border-cyan-300 lg:w-80"
                   />
                 </label>
               </div>
             </div>
-<<<<<<< HEAD
             <div className="mb-5 flex flex-wrap gap-2">
               {statusFilterOptions.map((option) => (
                 <button
@@ -340,8 +422,6 @@ export default function TransactionsPage() {
                 <p className="mt-1 text-xl font-black text-emerald-700">{totalReturned}</p>
               </div>
             </div>
-=======
->>>>>>> 073870c49c37e40a684fe502677b2ae29c3050be
 
             <div className="space-y-3 md:hidden">
               {filteredTransactions.map((transaction) => (
@@ -367,7 +447,6 @@ export default function TransactionsPage() {
                   <div className="mt-3 grid grid-cols-2 gap-2 text-xs font-semibold text-slate-600">
                     <p>{formatDateTime(transaction.createdAt)}</p>
                     <p className="text-right uppercase">{transaction.paymentMethod}</p>
-<<<<<<< HEAD
                     <p
                       className={`inline-flex w-fit rounded-full px-2 py-1 text-[11px] font-black ${statusBadgeClass(
                         transaction.resolvedStatus,
@@ -389,33 +468,21 @@ export default function TransactionsPage() {
                         {transaction.renterIdNumber ?? "-"}
                       </p>
                     ) : null}
-=======
-                    <p className="col-span-2">
-                      {transaction.items.reduce((sum, item) => sum + item.qty, 0)} item
-                    </p>
->>>>>>> 073870c49c37e40a684fe502677b2ae29c3050be
                   </div>
                 </button>
               ))}
             </div>
 
             <div className="hidden overflow-x-auto md:block">
-<<<<<<< HEAD
               <table className="w-full min-w-[1040px] text-left text-sm">
-=======
-              <table className="w-full min-w-[820px] text-left text-sm">
->>>>>>> 073870c49c37e40a684fe502677b2ae29c3050be
                 <thead className="text-xs uppercase tracking-[0.16em] text-slate-400">
                   <tr>
                     <th className="py-3">Invoice</th>
                     <th>Kasir</th>
                     <th>Waktu</th>
-<<<<<<< HEAD
                     <th>Status</th>
                     <th>Jatuh tempo</th>
                     <th>ID penyewa</th>
-=======
->>>>>>> 073870c49c37e40a684fe502677b2ae29c3050be
                     <th>Metode</th>
                     <th>Item</th>
                     <th className="text-right">Total</th>
@@ -435,7 +502,6 @@ export default function TransactionsPage() {
                       <td className="py-4 font-black text-slate-950">{transaction.invoiceCode}</td>
                       <td>{transaction.userName}</td>
                       <td>{formatDateTime(transaction.createdAt)}</td>
-<<<<<<< HEAD
                       <td>
                         <span
                           className={`inline-flex rounded-full px-3 py-1 text-xs font-black ${statusBadgeClass(
@@ -457,8 +523,6 @@ export default function TransactionsPage() {
                             }`
                           : "—"}
                       </td>
-=======
->>>>>>> 073870c49c37e40a684fe502677b2ae29c3050be
                       <td className="uppercase">{transaction.paymentMethod}</td>
                       <td>{transaction.items.reduce((sum, item) => sum + item.qty, 0)}</td>
                       <td className="text-right font-black text-slate-950">
@@ -472,13 +536,8 @@ export default function TransactionsPage() {
           </section>
         </section>
 
-<<<<<<< HEAD
-        <aside className="2xl:sticky 2xl:top-6">
-          <section className="flex flex-col rounded-[2rem] bg-slate-950 p-5 text-white shadow-2xl shadow-slate-950/20 2xl:max-h-[calc(100vh-3rem)] 2xl:overflow-y-auto">
-=======
-        <aside className="xl:sticky xl:top-6 xl:h-[calc(100vh-3rem)]">
-          <section className="flex h-full flex-col rounded-[2rem] bg-slate-950 p-5 text-white shadow-2xl shadow-slate-950/20">
->>>>>>> 073870c49c37e40a684fe502677b2ae29c3050be
+        <aside className="xl:sticky xl:top-24">
+          <section className="flex flex-col rounded-[2rem] bg-slate-950 p-5 text-white shadow-2xl shadow-slate-950/20 xl:max-h-[calc(100vh-8rem)] xl:overflow-y-auto">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-sm text-slate-400">Detail invoice</p>
@@ -521,13 +580,10 @@ export default function TransactionsPage() {
                     <p className="mt-2 font-bold uppercase">{activeTransaction.paymentMethod}</p>
                   </div>
                   <div className="rounded-3xl bg-white/10 p-4">
-<<<<<<< HEAD
                     <p className="text-xs text-slate-400">Status</p>
                     <p className="mt-2 font-bold">{statusLabel(activeTransaction.resolvedStatus)}</p>
                   </div>
                   <div className="rounded-3xl bg-white/10 p-4">
-=======
->>>>>>> 073870c49c37e40a684fe502677b2ae29c3050be
                     <p className="text-xs text-slate-400">Lama sewa</p>
                     <p className="mt-2 font-bold">{activeTransaction.rentalDays ?? "—"} hari</p>
                   </div>
@@ -565,14 +621,7 @@ export default function TransactionsPage() {
                     <p className="text-xs text-slate-400">Denda</p>
                     <p className="mt-2 font-bold">{formatCurrency(activeTransaction.lateFeeAmount ?? 0)}</p>
                   </div>
-                  {activeTransaction.yearEndHolidayApplied ? (
-                    <div className="rounded-3xl bg-amber-400/15 p-4">
-                      <p className="text-xs text-amber-200/90">Pengali 28–31 Des</p>
-                      <p className="mt-2 font-bold text-amber-100">
-                        ×{activeTransaction.holidayMultiplier ?? 1}
-                      </p>
-                    </div>
-                  ) : null}
+
                 </div>
 
                 {editing ? (
@@ -652,11 +701,7 @@ export default function TransactionsPage() {
                   </form>
                 ) : null}
 
-<<<<<<< HEAD
                 <div className="mt-5 space-y-3">
-=======
-                <div className="mt-5 flex-1 space-y-3 overflow-y-auto">
->>>>>>> 073870c49c37e40a684fe502677b2ae29c3050be
                   {activeTransaction.items.map((item) => (
                     <div key={`${activeTransaction.id}-${item.productId}`} className="rounded-3xl bg-white/8 p-4">
                       <div className="flex justify-between gap-3">
@@ -693,12 +738,7 @@ export default function TransactionsPage() {
                       <span>{formatCurrency(activeTransaction.multiDayExtraAmount)}</span>
                     </div>
                   ) : null}
-                  {activeTransaction.rentalSubtotalBeforeHoliday != null ? (
-                    <div className="flex justify-between text-sm text-slate-500">
-                      <span>Subtotal sebelum pengali libur</span>
-                      <span>{formatCurrency(activeTransaction.rentalSubtotalBeforeHoliday)}</span>
-                    </div>
-                  ) : null}
+
                   <div className="flex justify-between text-sm text-slate-500">
                     <span>Total sewa (sebelum denda)</span>
                     <span>

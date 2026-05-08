@@ -102,18 +102,15 @@ export type PosTransaction = {
   invoiceCode: string;
   userId: string;
   userName: string;
-  /** Total sewa setelah hari sewa + pengali khusus (mis. 28–31 Des), sebelum denda keterlambatan. */
+  /** Total sewa setelah hari sewa. */
   baseTotalPrice?: number;
   rentalDays?: number;
   pickupDate?: string;
   returnDueDate?: string;
   actualReturnDate?: string;
   firstDaySubtotal?: number;
-  /** Biaya tambahan karena tarif hari ke-2+ (+20% per hari tambahan, sebelum pengali liburan). */
+  /** Biaya tambahan karena tarif hari ke-2+ (+20% per hari tambahan). */
   multiDayExtraAmount?: number;
-  rentalSubtotalBeforeHoliday?: number;
-  holidayMultiplier?: number;
-  yearEndHolidayApplied?: boolean;
   renterIdType?: RenterIdType;
   renterIdNumber?: string;
   status?: RentalStatus;
@@ -150,9 +147,6 @@ export type CheckoutPayload = {
   actualReturnDate: string;
   firstDaySubtotal: number;
   multiDayExtraAmount: number;
-  rentalSubtotalBeforeHoliday: number;
-  holidayMultiplier: number;
-  yearEndHolidayApplied: boolean;
   renterIdType: RenterIdType;
   renterIdNumber: string;
   checkoutChecklist: RentalChecklist;

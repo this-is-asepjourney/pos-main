@@ -1,11 +1,10 @@
-import type { CartItem } from "@/types/pos";
+import type { CartItem, TransactionItem } from "@/types/pos";
 
-/** Tarif hari ke-2 dst = tarif hari pertama × faktor ini (flyer: +20% per hari tambahan). */
-export const EXTRA_DAY_PRICE_FACTOR = 1.2;
+/** Tarif hari ke-2 dst = tarif hari pertama (faktor 1.0). */
+export const EXTRA_DAY_PRICE_FACTOR = 1.0;
 
-const BASE_LATE_FEE_RATE = 0.2;
-const NORMAL_LATE_FEE_BASE_FACTOR = 1;
-const LIGHTING_LATE_FEE_BASE_FACTOR = 0.5;
+const NORMAL_LATE_FEE_RATE = 0.2;
+const LIGHTING_LATE_FEE_RATE = 0.5;
 
 const normalizeCategory = (categoryName?: string) => (categoryName ?? "").trim().toLowerCase();
 
@@ -28,20 +27,7 @@ export const isLightingCategory = (categoryName?: string) => {
   );
 };
 
-/**
- * Regulasi:
- * - Denda dasar 20% per hari dari nilai sewa.
- * - Kategori normal: 100% dasar tarif (faktor 1.0).
- * - Kategori perlampuan: 50% dasar tarif (faktor 0.5).
- * - Kategori sekali pakai: bebas denda (faktor 0).
- */
-export const getLateFeeRate = (categoryName?: string) => {
-  if (isConsumableCategory(categoryName)) return 0;
-  if (isLightingCategory(categoryName)) {
-    return BASE_LATE_FEE_RATE * LIGHTING_LATE_FEE_BASE_FACTOR;
-  }
-  return BASE_LATE_FEE_RATE * NORMAL_LATE_FEE_BASE_FACTOR;
-};
+
 
 export const parseLocalDateFromInput = (isoDate: string): Date => {
   const [y, m, d] = isoDate.split("-").map((part) => Number(part));
@@ -84,20 +70,6 @@ export const lateDaysFromActualReturn = (returnDueIso: string, actualReturnIso: 
   return Math.max(0, calendarDaysDiff(returnDue, actual));
 };
 
-/** 28–31 Des: tarif leaflet resmi tidak berlaku — bisa dikalikan via env untuk tarif khusus. */
-export const isYearEndHolidayPickup = (pickupIso: string): boolean => {
-  const pickup = parseLocalDateFromInput(pickupIso);
-  if (Number.isNaN(pickup.getTime())) return false;
-  return pickup.getMonth() === 11 && pickup.getDate() >= 28 && pickup.getDate() <= 31;
-};
-
-export const getYearEndRentalMultiplier = (): number => {
-  const raw = process.env.NEXT_PUBLIC_RENTAL_YEAR_END_MULTIPLIER;
-  if (raw === undefined || raw === "") return 1;
-  const n = Number(raw);
-  return Number.isFinite(n) && n > 0 ? n : 1;
-};
-
 export const cartFirstDaySubtotal = (cart: CartItem[]): number =>
   cart.reduce((sum, item) => sum + item.price * item.qty, 0);
 
@@ -107,30 +79,39 @@ export const computeRentalLineTotal = (price: number, qty: number, rentalDays: n
   return price * qty * multiplier;
 };
 
-export const computeRentalSubtotalBeforeHoliday = (cart: CartItem[], rentalDays: number): number =>
+export const computeRentalSubtotal = (cart: CartItem[], rentalDays: number): number =>
   cart.reduce((sum, item) => sum + computeRentalLineTotal(item.price, item.qty, rentalDays), 0);
 
-export const applyHolidayMultiplier = (amount: number, multiplier: number): number =>
-  Math.round(amount * multiplier);
-
-export const calculateLateFee = (
-  cart: CartItem[],
+export const calculateItemLateFee = (
+  item: TransactionItem,
   rentalDays: number,
   lateDays: number,
-  holidayMultiplier: number,
-) => {
+): number => {
   if (!Number.isFinite(lateDays) || lateDays <= 0) return 0;
 
   const sanitizedLateDays = Math.floor(lateDays);
-  const mult = Number.isFinite(holidayMultiplier) && holidayMultiplier > 0 ? holidayMultiplier : 1;
 
-  const lateFeePerDay = cart.reduce((sum, item) => {
-    const lineRental = computeRentalLineTotal(item.price, item.qty, rentalDays);
-    const lineBase = Math.round(lineRental * mult);
-    return sum + lineBase * getLateFeeRate(item.categoryName);
-  }, 0);
+  if (isConsumableCategory(item.categoryName)) {
+    return 0;
+  }
 
-  return lateFeePerDay * sanitizedLateDays;
+  if (isLightingCategory(item.categoryName)) {
+    const itemBasePrice = item.price * item.qty;
+    return Math.round(itemBasePrice * LIGHTING_LATE_FEE_RATE) * sanitizedLateDays;
+  }
+
+  const lineRental = computeRentalLineTotal(item.price, item.qty, rentalDays);
+  const lineBase = Math.round(lineRental);
+  return Math.round(lineBase * NORMAL_LATE_FEE_RATE) * sanitizedLateDays;
+};
+
+export const calculateLateFee = (
+  cart: TransactionItem[],
+  rentalDays: number,
+  lateDays: number,
+) => {
+  if (!Number.isFinite(lateDays) || lateDays <= 0) return 0;
+  return cart.reduce((sum, item) => sum + calculateItemLateFee(item, rentalDays, lateDays), 0);
 };
 
 export type LateFeeKind = "none" | "standard" | "lighting";

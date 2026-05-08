@@ -16,14 +16,11 @@ import {
 import { db, isFirebaseConfigured } from "@/lib/firebase";
 import { demoTransactions } from "@/lib/demo-data";
 import {
-  applyHolidayMultiplier,
   calculateLateFee,
   cartFirstDaySubtotal,
   computeRentalLineTotal,
-  computeRentalSubtotalBeforeHoliday,
-  getYearEndRentalMultiplier,
+  computeRentalSubtotal,
   inclusiveRentalDays,
-  isYearEndHolidayPickup,
   lateDaysFromActualReturn,
 } from "@/lib/rental";
 import type {
@@ -121,35 +118,20 @@ export const checkout = async (payload: CheckoutPayload): Promise<string> => {
     assertClose("Hari terlambat", expectedLate, payload.lateDays);
   }
 
-  const yearEnd = pickup ? isYearEndHolidayPickup(pickup) : false;
-  const expectedHolidayMult = yearEnd ? getYearEndRentalMultiplier() : 1;
-  assertClose("Pengali tarif musim liburan", expectedHolidayMult, payload.holidayMultiplier);
-
-  if (!pickup && payload.yearEndHolidayApplied) {
-    throw new Error("Data tarif musim liburan tidak valid.");
-  }
-  if (yearEnd !== payload.yearEndHolidayApplied) {
-    throw new Error("Penanda tanggal liburan akhir tahun tidak valid.");
-  }
-
-  const rentalCore = computeRentalSubtotalBeforeHoliday(payload.cart, payload.rentalDays);
+  const rentalCore = computeRentalSubtotal(payload.cart, payload.rentalDays);
   const firstDay = cartFirstDaySubtotal(payload.cart);
   assertClose("Total hari pertama", firstDay, payload.firstDaySubtotal);
-  assertClose("Subtotal sewa", rentalCore, payload.rentalSubtotalBeforeHoliday);
   assertClose("Tambahan hari sewa", rentalCore - firstDay, payload.multiDayExtraAmount);
-
-  const baseExpected = applyHolidayMultiplier(rentalCore, payload.holidayMultiplier);
-  assertClose("Total sewa", baseExpected, payload.baseTotalPrice);
+  assertClose("Total sewa", rentalCore, payload.baseTotalPrice);
 
   const lateExpected = calculateLateFee(
     payload.cart,
     payload.rentalDays,
     payload.lateDays,
-    payload.holidayMultiplier,
   );
   assertClose("Denda", lateExpected, payload.lateFeeAmount);
 
-  assertClose("Total akhir", baseExpected + lateExpected, payload.totalPrice);
+  assertClose("Total akhir", rentalCore + lateExpected, payload.totalPrice);
 
   for (const item of payload.cart) {
     if (item.qty > item.stock) {
@@ -202,9 +184,6 @@ export const checkout = async (payload: CheckoutPayload): Promise<string> => {
       checkoutChecklist: payload.checkoutChecklist,
       firstDaySubtotal: payload.firstDaySubtotal,
       multiDayExtraAmount: payload.multiDayExtraAmount,
-      rentalSubtotalBeforeHoliday: payload.rentalSubtotalBeforeHoliday,
-      holidayMultiplier: payload.holidayMultiplier,
-      yearEndHolidayApplied: payload.yearEndHolidayApplied,
       renterIdType: payload.renterIdType || null,
       renterIdNumber: payload.renterIdNumber.trim() || null,
       baseTotalPrice: payload.baseTotalPrice,
@@ -221,9 +200,7 @@ export const checkout = async (payload: CheckoutPayload): Promise<string> => {
         notes: item.notes ?? "",
         price: item.price,
         qty: item.qty,
-        subtotal: Math.round(
-          computeRentalLineTotal(item.price, item.qty, payload.rentalDays) * payload.holidayMultiplier,
-        ),
+        subtotal: Math.round(computeRentalLineTotal(item.price, item.qty, payload.rentalDays)),
         categoryName: item.categoryName,
       })),
       createdAt: serverTimestamp(),
@@ -299,7 +276,6 @@ export const processReturnTransaction = async (
   }
 
   const rentalDays = Math.max(1, Math.floor(Number(transaction.rentalDays ?? 1)));
-  const holidayMultiplier = Number(transaction.holidayMultiplier ?? 1);
   const lateDays = lateDaysFromActualReturn(transaction.returnDueDate, actualReturnDate);
   const baseTotalPrice =
     Number(transaction.baseTotalPrice ?? 0) ||
@@ -319,7 +295,6 @@ export const processReturnTransaction = async (
     })),
     rentalDays,
     lateDays,
-    holidayMultiplier,
   );
 
   const totalPrice = baseTotalPrice + lateFeeAmount;

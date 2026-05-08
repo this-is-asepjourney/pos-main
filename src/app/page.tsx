@@ -19,37 +19,47 @@ import { ProductCard } from "@/components/product-card";
 import { SuccessPopup } from "@/components/success-popup";
 import { useAuth } from "@/components/app-provider";
 import { formatCurrency } from "@/lib/format";
-import {
-  applyHolidayMultiplier,
-  cartFirstDaySubtotal,
-  cartHasMixedLateFeeRules,
-  computeRentalSubtotalBeforeHoliday,
-  getYearEndRentalMultiplier,
-  inclusiveRentalDays,
-  isYearEndHolidayPickup,
-} from "@/lib/rental";
-import { checkout } from "@/services/transaction-service";
+import { cartHasMixedLateFeeRules } from "@/lib/rental";
 import { subscribeCategories, subscribeProducts } from "@/services/product-service";
-import type { CartItem, Category, PaymentMethod, Product, RenterIdType } from "@/types/pos";
+import type { Category, Product } from "@/types/pos";
 import { clsx } from "clsx";
+import { useCart } from "@/components/cart-provider";
+import { useRouter } from "next/navigation";
 
 export default function CashierPage() {
-  const { user, displayName } = useAuth();
+  const router = useRouter();
+  const { displayName } = useAuth();
+  const {
+    cart,
+    addToCart,
+    increaseQty,
+    decreaseQty,
+    removeFromCart,
+    pickupDate,
+    setPickupDate,
+    returnDueDate,
+    setReturnDueDate,
+    checkoutCondition,
+    setCheckoutCondition,
+    checkoutAccessories,
+    setCheckoutAccessories,
+    checkoutPhotoNotes,
+    setCheckoutPhotoNotes,
+    renterIdType,
+    setRenterIdType,
+    renterIdNumber,
+    setRenterIdNumber,
+    rentalDays,
+    dateScheduleError,
+    firstDaySubtotal,
+    rentalSubtotal,
+    grandTotal,
+  } = useCart();
+
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [cart, setCart] = useState<CartItem[]>([]);
   const [query, setQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState("all");
-  const [paidAmount, setPaidAmount] = useState(0);
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
-  const [pickupDate, setPickupDate] = useState("");
-  const [returnDueDate, setReturnDueDate] = useState("");
-  const [checkoutCondition, setCheckoutCondition] = useState("");
-  const [checkoutAccessories, setCheckoutAccessories] = useState("");
-  const [checkoutPhotoNotes, setCheckoutPhotoNotes] = useState("");
-  const [renterIdType, setRenterIdType] = useState<RenterIdType>("");
-  const [renterIdNumber, setRenterIdNumber] = useState("");
-  const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [notice, setNotice] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const [successPopup, setSuccessPopup] = useState("");
   const [cartSidebarOpen, setCartSidebarOpen] = useState(true);
@@ -75,173 +85,24 @@ export default function CashierPage() {
     });
   }, [activeCategory, products, query]);
 
-  const dateScheduleError = useMemo(() => {
-    if ((pickupDate && !returnDueDate) || (!pickupDate && returnDueDate)) {
-      return "Lengkapi tanggal ambil dan tanggal kembali, atau kosongkan keduanya.";
-    }
-    if (pickupDate && returnDueDate) {
-      try {
-        inclusiveRentalDays(pickupDate, returnDueDate);
-        return "";
-      } catch (error) {
-        return error instanceof Error ? error.message : "Tanggal tidak valid.";
-      }
-    }
-    return "";
-  }, [pickupDate, returnDueDate]);
-
-  const rentalDays = useMemo(() => {
-    if (!pickupDate || !returnDueDate || dateScheduleError) return 0;
-    return inclusiveRentalDays(pickupDate, returnDueDate);
-  }, [pickupDate, returnDueDate, dateScheduleError]);
-
-  const firstDaySubtotal = useMemo(() => cartFirstDaySubtotal(cart), [cart]);
-  const rentalSubtotalBeforeHoliday = useMemo(
-    () => computeRentalSubtotalBeforeHoliday(cart, rentalDays),
-    [cart, rentalDays],
-  );
-  const multiDayExtraAmount = rentalSubtotalBeforeHoliday - firstDaySubtotal;
-  const yearEndHolidayApplied = pickupDate ? isYearEndHolidayPickup(pickupDate) : false;
-  const holidayMultiplier = yearEndHolidayApplied ? getYearEndRentalMultiplier() : 1;
-  const baseTotalPrice = useMemo(
-    () => applyHolidayMultiplier(rentalSubtotalBeforeHoliday, holidayMultiplier),
-    [rentalSubtotalBeforeHoliday, holidayMultiplier],
-  );
+  const multiDayExtraAmount = rentalSubtotal - firstDaySubtotal;
+  const baseTotalPrice = rentalSubtotal;
   const lateFeeAmount = 0;
-  const grandTotal = baseTotalPrice;
-  const effectivePaidAmount = paymentMethod === "qris" ? grandTotal : paidAmount;
   const lowStockProducts = products.filter((product) => product.stock <= 10).length;
   const mixedCategoryWarning = cart.length > 1 && cartHasMixedLateFeeRules(cart);
-  const yearEndMultConfigured = getYearEndRentalMultiplier();
-  const yearEndHolidayNotice = yearEndHolidayApplied
-    ? yearEndMultConfigured === 1
-      ? "Pengambilan 28–31 Desember: tarif leaflet standar tidak berlaku. Set NEXT_PUBLIC_RENTAL_YEAR_END_MULTIPLIER (mis. 1.2) untuk mengalikan total sewa, atau tetap 1 dan sesuaikan harga manual di master produk."
-      : `Pengambilan 28–31 Desember: total sewa dikalikan ×${yearEndMultConfigured}. Pastikan sesuai kesepakatan toko.`
-    : "";
 
-  const addToCart = (product: Product) => {
-    setNotice(null);
-    setCartSidebarOpen(true);
-    setCart((currentCart) => {
-      const existing = currentCart.find((item) => item.productId === product.id);
-      if (existing) {
-        if (existing.qty >= product.stock) return currentCart;
-        return currentCart.map((item) =>
-          item.productId === product.id
-            ? { ...item, qty: item.qty + 1, subtotal: (item.qty + 1) * item.price }
-            : item,
-        );
-      }
-
-      return [
-        ...currentCart,
-        {
-          productId: product.id,
-          name: product.name,
-          specification: product.specification,
-          notes: product.notes,
-          price: product.price,
-          qty: 1,
-          stock: product.stock,
-          subtotal: product.price,
-          categoryName: product.categoryName,
-          imageUrl: product.imageUrl,
-        },
-      ];
-    });
-  };
-
-  const increaseQty = (productId: string) => {
-    setCart((currentCart) =>
-      currentCart.map((item) =>
-        item.productId === productId && item.qty < item.stock
-          ? { ...item, qty: item.qty + 1, subtotal: (item.qty + 1) * item.price }
-          : item,
-      ),
-    );
-  };
-
-  const decreaseQty = (productId: string) => {
-    setCart((currentCart) =>
-      currentCart
-        .map((item) =>
-          item.productId === productId
-            ? { ...item, qty: item.qty - 1, subtotal: (item.qty - 1) * item.price }
-            : item,
-        )
-        .filter((item) => item.qty > 0),
-    );
-  };
-
-  const handleCheckout = async () => {
-    setIsCheckingOut(true);
+  const handleCheckout = () => {
     setNotice(null);
 
-    if ((renterIdType && !renterIdNumber.trim()) || (!renterIdType && renterIdNumber.trim())) {
-      setNotice({
-        type: "error",
-        message: "Lengkapi jenis dan nomor identitas, atau kosongkan keduanya.",
-      });
-      setIsCheckingOut(false);
-      return;
-    }
     if (!pickupDate || !returnDueDate || dateScheduleError) {
       setNotice({
         type: "error",
         message: "Tanggal ambil dan rencana kembali wajib diisi dengan benar.",
       });
-      setIsCheckingOut(false);
       return;
     }
 
-    try {
-      const invoiceCode = await checkout({
-        cart,
-        rentalDays,
-        pickupDate,
-        returnDueDate,
-        actualReturnDate: "",
-        firstDaySubtotal,
-        multiDayExtraAmount,
-        rentalSubtotalBeforeHoliday,
-        holidayMultiplier,
-        yearEndHolidayApplied,
-        renterIdType,
-        renterIdNumber,
-        checkoutChecklist: {
-          condition: checkoutCondition.trim(),
-          accessories: checkoutAccessories.trim(),
-          photoNotes: checkoutPhotoNotes.trim(),
-        },
-        baseTotalPrice,
-        lateDays: 0,
-        lateFeeAmount: 0,
-        totalPrice: baseTotalPrice,
-        paidAmount: effectivePaidAmount,
-        paymentMethod,
-        userId: user?.uid ?? "demo-admin",
-        userName: displayName,
-      });
-      const successMessage = `Transaksi ${invoiceCode} berhasil disimpan.`;
-      setNotice({ type: "success", message: successMessage });
-      setSuccessPopup(successMessage);
-      setCart([]);
-      setPaidAmount(0);
-      setPickupDate("");
-      setReturnDueDate("");
-      setCheckoutCondition("");
-      setCheckoutAccessories("");
-      setCheckoutPhotoNotes("");
-      setRenterIdType("");
-      setRenterIdNumber("");
-    } catch (error) {
-      setNotice({
-        type: "error",
-        message: error instanceof Error ? error.message : "Checkout gagal diproses.",
-      });
-    } finally {
-      setIsCheckingOut(false);
-    }
+    router.push("/checkout");
   };
 
   return (
@@ -259,8 +120,8 @@ export default function CashierPage() {
       ) : null}
       <div
         className={clsx(
-          "grid min-h-screen gap-5 p-4 xl:p-6",
-          cartSidebarOpen ? "xl:grid-cols-[1fr_430px]" : "xl:grid-cols-1",
+          "grid min-h-screen gap-5 p-4 lg:p-6",
+          cartSidebarOpen ? "lg:grid-cols-[1fr_430px]" : "lg:grid-cols-1",
         )}
       >
         <section className="min-w-0 space-y-5">
@@ -291,8 +152,7 @@ export default function CashierPage() {
                 </h1>
                 <p className="mt-4 max-w-xl text-sm leading-relaxed text-slate-400">
                   Tarif di etalase = hari pertama per unit. Perpanjangan hari otomatis +20% per hari tambahan.
-                  Denda keterlambatan diproses saat barang kembali di menu Pengembalian. Ambil 28–31 Des: tarif bisa
-                  dikalikan via pengaturan lingkungan.
+                  Denda keterlambatan diproses saat barang kembali di menu Pengembalian.
                 </p>
               </div>
               <div className="grid w-full max-w-md grid-cols-2 gap-3 sm:grid-cols-3 lg:max-w-lg">
@@ -392,7 +252,7 @@ export default function CashierPage() {
           </div>
 
           {filteredProducts.length ? (
-            <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3">
               {filteredProducts.map((product) => (
                 <ProductCard key={product.id} product={product} onAdd={addToCart} />
               ))}
@@ -411,8 +271,8 @@ export default function CashierPage() {
         </section>
 
         {cartSidebarOpen ? (
-          <div className="xl:sticky xl:top-6 xl:h-[calc(100vh-3rem)]">
-            <div className="mb-3 flex justify-end xl:hidden">
+          <div className="lg:sticky lg:top-24 lg:h-[calc(100vh-8rem)]">
+            <div className="mb-3 flex justify-end lg:hidden">
               <button
                 type="button"
                 onClick={() => setCartSidebarOpen(false)}
@@ -438,10 +298,7 @@ export default function CashierPage() {
               dateScheduleError={dateScheduleError}
               firstDaySubtotal={firstDaySubtotal}
               multiDayExtraAmount={multiDayExtraAmount}
-              rentalSubtotalBeforeHoliday={rentalSubtotalBeforeHoliday}
-              holidayMultiplier={holidayMultiplier}
-              yearEndHolidayApplied={yearEndHolidayApplied}
-              yearEndHolidayNotice={yearEndHolidayNotice}
+
               mixedCategoryWarning={mixedCategoryWarning}
               renterIdType={renterIdType}
               renterIdNumber={renterIdNumber}
@@ -450,24 +307,42 @@ export default function CashierPage() {
               baseTotalPrice={baseTotalPrice}
               lateFeeAmount={lateFeeAmount}
               grandTotal={grandTotal}
-              paidAmount={effectivePaidAmount}
-              paymentMethod={paymentMethod}
-              isCheckingOut={isCheckingOut}
-              onPaidAmountChange={setPaidAmount}
-              onPaymentMethodChange={(method) => {
-                setPaymentMethod(method);
-                setPaidAmount(0);
-              }}
+              paidAmount={0}
+              paymentMethod="cash"
+              isCheckingOut={false}
+              onPaidAmountChange={() => {}}
+              onPaymentMethodChange={() => {}}
               onIncrease={increaseQty}
               onDecrease={decreaseQty}
-              onRemove={(productId) =>
-                setCart((currentCart) => currentCart.filter((item) => item.productId !== productId))
-              }
+              onRemove={removeFromCart}
               onCheckout={handleCheckout}
+              showPaymentFields={false}
+              showOrderDetails={false}
             />
           </div>
         ) : null}
       </div>
+
+      {!cartSidebarOpen && (
+        <button
+          key={cart.reduce((sum, item) => sum + item.qty, 0)}
+          type="button"
+          onClick={() => setCartSidebarOpen(true)}
+          className={clsx(
+            "fixed bottom-6 right-6 z-40 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500 text-white shadow-2xl shadow-emerald-500/40 lg:hidden animate-ping-scale",
+            cart.length > 0 ? "animate-bounce-subtle" : "animate-in fade-in zoom-in"
+          )}
+        >
+          <div className="relative">
+            <ShoppingCart size={24} strokeWidth={2.5} />
+            {cart.length > 0 && (
+              <span className="absolute -right-3 -top-3 flex size-6 items-center justify-center rounded-full bg-rose-500 text-[10px] font-black ring-2 ring-white">
+                {cart.reduce((sum, item) => sum + item.qty, 0)}
+              </span>
+            )}
+          </div>
+        </button>
+      )}
     </AppShell>
   );
 }

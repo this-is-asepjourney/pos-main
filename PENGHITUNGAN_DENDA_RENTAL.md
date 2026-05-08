@@ -14,7 +14,7 @@ Dokumen ini menjelaskan aturan hitung yang dipakai aplikasi untuk sewa dan denda
 
 Untuk setiap item:
 
-- `lineRental = price * qty * (1 + 1.2 * (rentalDays - 1))`
+- `lineRental = price * qty * rentalDays`
 
 Keterangan:
 
@@ -22,44 +22,28 @@ Keterangan:
 - `qty`: jumlah unit item
 - `rentalDays`: lama sewa (minimal 1)
 
-### 2.2 Subtotal sewa
+### 2.2 Subtotal sewa (Total Harga Sewa)
 
-- `rentalSubtotalBeforeHoliday = jumlah semua lineRental`
-
-### 2.3 Pengali liburan akhir tahun (opsional)
-
-- Jika tanggal ambil 28–31 Desember, sistem memakai:
-  - `holidayMultiplier = NEXT_PUBLIC_RENTAL_YEAR_END_MULTIPLIER` (default `1`)
-- Jika bukan 28–31 Desember:
-  - `holidayMultiplier = 1`
-
-Lalu:
-
-- `baseTotalPrice = round(rentalSubtotalBeforeHoliday * holidayMultiplier)`
+- `baseTotalPrice = round(jumlah semua lineRental)`
 
 ## 3) Rumus Denda Keterlambatan (Regulasi Terbaru)
 
 ### 3.1 Prinsip regulasi
 
-- Denda dasar: **20% per hari** dari nilai sewa.
-- Kategori normal (tenda, backpack, sleeping set, dll): basis tarif **100%**.
-- Kategori perlampuan: basis tarif **50%**.
-- Kategori sekali pakai: basis tarif **0%** (bebas denda).
-- Denda berlaku untuk setiap tambah hari sewa di luar perjanjian awal (`lateDays`).
+- Regulasi denda berlaku untuk keterlambatan (`lateDays` > 0).
+- Jika barang normal: diambil **20%** dari total sewa (`lineBase`) per hari terlambat.
+- Jika item perlampuan: diambil **50%** (setengah) dari Harga sewa dasar (`price * qty`) per hari terlambat.
+- Denda berlaku untuk semua barang kecuali barang sekali pakai (bebas denda, contoh: gas, koyo, dll).
 
-### 3.2 Formula rate efektif per kategori
-
-- `effectiveLateRate = 20% * categoryBaseFactor`
-- Normal: `categoryBaseFactor = 1` → `effectiveLateRate = 20%`
-- Perlampuan: `categoryBaseFactor = 0.5` → `effectiveLateRate = 10%`
-- Sekali pakai: `categoryBaseFactor = 0` → `effectiveLateRate = 0%`
-
-### 3.3 Denda per hari
+### 3.2 Denda per hari
 
 Untuk setiap item:
 
-- `lineBase = round(lineRental * holidayMultiplier)`
-- `lineLateFeePerDay = lineBase * effectiveLateRate`
+- `lineBase = round(lineRental)` (Total sewa item untuk seluruh durasi sewa)
+- `itemBasePrice = price * qty` (Harga sewa harian item)
+- Jika normal: `lineLateFeePerDay = lineBase * 20%`
+- Jika perlampuan: `lineLateFeePerDay = itemBasePrice * 50%`
+- Jika sekali pakai: `lineLateFeePerDay = 0`
 
 Kemudian:
 
@@ -80,14 +64,13 @@ Misal:
 
 - Tenda JAVA 6 (kategori Tenda), `price=70.000`, `qty=1`
 - Lama sewa `2` hari
-- Tidak masuk tanggal liburan (`holidayMultiplier=1`)
 - Terlambat `1` hari
 
 Langkah:
 
 1. `lineRental = 70.000 * 1 * (1 + 1.2*(2-1)) = 154.000`
 2. `baseTotalPrice = 154.000`
-3. Rate denda kategori Tenda = `20%` (normal, basis 100%)
+3. Rate denda kategori Tenda = `20%` (normal)
 4. `lateFeeAmount = 154.000 * 20% * 1 = 30.800`
 5. `totalPrice = 154.000 + 30.800 = 184.800`
 
@@ -97,7 +80,6 @@ Langkah:
   - Gunakan nama seperti `Perlampuan` dan `Sekali Pakai`.
 - Jika ingin ubah kebijakan, bagian yang biasa diubah:
   - kategori/rate denda
-  - multiplier akhir tahun
   - rumus hari tambahan sewa
 
 ## 7) Input Category yang Harus Dipakai (Agar Terhubung Regulasi Denda)
@@ -117,7 +99,7 @@ Contoh input kategori:
 - `Cooking Set`
 - `Sepatu`
 
-### 7.2 Kategori perlampuan (denda efektif 10% per hari)
+### 7.2 Kategori perlampuan (denda efektif 50% per hari)
 
 Agar terbaca sebagai perlampuan, nama kategori perlu mengandung salah satu keyword:
 
