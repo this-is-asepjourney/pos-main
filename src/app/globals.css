@@ -83,10 +83,53 @@ textarea {
 
 button {
   cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
 
 button:disabled {
   cursor: not-allowed;
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+}
+
+/* Prevent horizontal overflow on mobile */
+body {
+  overflow-x: hidden;
+}
+
+/* Remove scrollbar but keep scrolling (used for nav) */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Thin scrollbar for panels */
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.1) transparent;
+}
+.scrollbar-thin::-webkit-scrollbar {
+  width: 4px;
+}
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background-color: rgba(255,255,255,0.15);
+  border-radius: 99px;
+}
+
+/* Minimum touch target size */
+.touch-target {
+  min-height: 44px;
+  min-width: 44px;
 }
 
 ::selection {

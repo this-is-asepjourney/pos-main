@@ -51,7 +51,7 @@ export function AppShell({ children, allowedRoles }: AppShellProps) {
   return (
     <div className="min-h-screen lg:flex">
       <Navbar />
-      <main className="min-w-0 flex-1">{children}</main>
+      <main className="min-w-0 flex-1 pb-20 lg:pb-0">{children}</main>
     </div>
   );
 }

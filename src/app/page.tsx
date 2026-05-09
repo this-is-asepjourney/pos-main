@@ -112,20 +112,20 @@ export default function CashierPage() {
         <button
           type="button"
           onClick={() => setCartSidebarOpen(true)}
-          className="fixed bottom-5 right-5 z-40 flex items-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-500 to-cyan-500 px-4 py-3.5 text-sm font-black text-slate-950 shadow-2xl shadow-emerald-900/40 ring-2 ring-white/20 transition hover:brightness-110"
+          className="fixed bottom-24 right-4 z-40 flex items-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-500 to-cyan-500 px-4 py-3 text-sm font-black text-slate-950 shadow-2xl shadow-emerald-900/40 ring-2 ring-white/20 transition hover:brightness-110 lg:bottom-5 lg:right-5"
         >
           <ShoppingCart size={18} strokeWidth={2.5} />
-          Order sewa{cart.length ? ` · ${cart.length}` : ""}
+          Sewa{cart.length ? ` · ${cart.length}` : ""}
         </button>
       ) : null}
       <div
         className={clsx(
-          "grid min-h-screen gap-5 p-4 lg:p-6",
-          cartSidebarOpen ? "lg:grid-cols-[1fr_430px]" : "lg:grid-cols-1",
+          "grid gap-4 p-3 lg:gap-5 lg:p-6",
+          cartSidebarOpen ? "lg:grid-cols-[1fr_400px] xl:grid-cols-[1fr_430px]" : "lg:grid-cols-1",
         )}
       >
         <section className="min-w-0 space-y-5">
-          <header className="relative overflow-hidden rounded-[2rem] border border-emerald-950/20 bg-slate-950 p-6 text-white shadow-2xl shadow-emerald-950/20">
+          <header className="relative overflow-hidden rounded-[1.5rem] lg:rounded-[2rem] border border-emerald-950/20 bg-slate-950 p-4 lg:p-6 text-white shadow-2xl shadow-emerald-950/20">
             <div
               className="pointer-events-none absolute -right-16 -top-24 size-72 rounded-full bg-emerald-500/15 blur-3xl"
               aria-hidden
@@ -144,7 +144,7 @@ export default function CashierPage() {
                   <Sparkles size={14} className="text-emerald-300" />
                   Shift aktif · {displayName}
                 </p>
-                <h1 className="mt-4 text-4xl font-black leading-[1.1] tracking-tight lg:text-[2.75rem]">
+                <h1 className="mt-3 text-2xl font-black leading-[1.1] tracking-tight lg:text-[2.75rem]">
                   Sewa alat outdoor
                   <span className="block bg-gradient-to-r from-emerald-300 to-cyan-300 bg-clip-text text-transparent">
                     cepat & transparan
@@ -252,7 +252,7 @@ export default function CashierPage() {
           </div>
 
           {filteredProducts.length ? (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3">
               {filteredProducts.map((product) => (
                 <ProductCard key={product.id} product={product} onAdd={addToCart} />
               ))}
@@ -276,7 +276,7 @@ export default function CashierPage() {
               <button
                 type="button"
                 onClick={() => setCartSidebarOpen(false)}
-                className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-black text-slate-800 shadow-sm"
+                className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-black text-slate-800 shadow-sm min-h-[44px]"
               >
                 <PanelRightClose size={16} />
                 Tutup panel

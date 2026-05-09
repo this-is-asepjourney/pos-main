@@ -123,9 +123,9 @@ export default function ReturnsPage() {
 
   return (
     <AppShell allowedRoles={["admin", "cashier"]}>
-      <div className="grid gap-6 p-4 lg:grid-cols-1 xl:grid-cols-2 xl:p-6">
+      <div className="grid gap-4 p-3 lg:gap-6 lg:p-4 xl:p-6 xl:grid-cols-2">
         <section className="space-y-5">
-          <header className="rounded-[2rem] bg-white p-6 shadow-sm">
+          <header className="rounded-[1.5rem] lg:rounded-[2rem] bg-white p-4 lg:p-6 shadow-sm">
             <p className="flex items-center gap-2 text-sm font-bold uppercase tracking-[0.18em] text-emerald-700">
               <Undo2 size={17} />
               Return

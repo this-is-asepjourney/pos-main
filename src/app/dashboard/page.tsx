@@ -29,8 +29,8 @@ export default function DashboardPage() {
 
   return (
     <AppShell allowedRoles={["admin"]}>
-      <div className="space-y-6 p-4 lg:p-6">
-        <header className="rounded-[2rem] bg-white p-6 shadow-sm">
+      <div className="space-y-4 p-3 lg:space-y-6 lg:p-6">
+        <header className="rounded-[1.5rem] lg:rounded-[2rem] bg-white p-4 lg:p-6 shadow-sm">
           <p className="text-sm font-bold uppercase tracking-[0.2em] text-cyan-700">Dashboard</p>
           <div className="mt-3 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
             <div>

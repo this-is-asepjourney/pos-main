@@ -126,8 +126,8 @@ export default function CheckoutPage() {
     <AppShell allowedRoles={["admin", "cashier"]}>
       <SuccessPopup message={successPopup} onClose={() => {}} />
       
-      <div className="mx-auto max-w-5xl p-4 lg:p-10">
-        <header className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mx-auto max-w-5xl p-3 sm:p-4 lg:p-10">
+        <header className="mb-5 lg:mb-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-4">
             <button
               onClick={() => router.back()}
@@ -153,7 +153,7 @@ export default function CheckoutPage() {
           </div>
         )}
 
-        <div className="grid gap-6 lg:grid-cols-[1fr_400px]">
+        <div className="grid gap-4 lg:gap-6 lg:grid-cols-[1fr_400px]">
           <div className="space-y-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">

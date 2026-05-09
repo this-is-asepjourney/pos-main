@@ -504,7 +504,7 @@ export default function ProductsPage() {
   return (
     <AppShell allowedRoles={["admin"]}>
       <SuccessPopup message={successPopup} onClose={() => setSuccessPopup("")} />
-      <div className="grid gap-6 p-4 xl:grid-cols-[380px_1fr] xl:p-6">
+      <div className="grid gap-4 p-3 lg:gap-6 lg:p-4 xl:grid-cols-[380px_1fr] xl:p-6">
         <section className="space-y-4">
           <div className="rounded-[2rem] bg-slate-950 p-6 text-white shadow-xl">
             <p className="flex items-center gap-2 text-sm font-bold uppercase tracking-[0.18em] text-cyan-200">

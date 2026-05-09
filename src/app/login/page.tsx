@@ -34,7 +34,7 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="grid min-h-screen bg-slate-950 p-4 text-white lg:grid-cols-[1.1fr_0.9fr]">
+    <main className="grid min-h-screen bg-slate-950 p-3 sm:p-4 text-white lg:grid-cols-[1.1fr_0.9fr]">
       <section className="relative hidden overflow-hidden rounded-[2rem] bg-gradient-to-br from-emerald-500 via-green-700 to-slate-950 p-10 lg:flex lg:flex-col lg:justify-between">
         <div className="absolute right-10 top-10 h-72 w-72 rounded-full bg-white/20 blur-3xl" />
         <div className="relative">
@@ -57,9 +57,9 @@ export default function LoginPage() {
         </div>
       </section>
 
-      <section className="flex items-center justify-center px-2 py-10 lg:px-12">
-        <div className="w-full max-w-md rounded-[2rem] border border-white/10 bg-white p-6 text-slate-950 shadow-2xl">
-          <div className="mb-8">
+      <section className="flex items-center justify-center px-2 py-8 sm:py-10 lg:px-12">
+        <div className="w-full max-w-md rounded-[1.5rem] lg:rounded-[2rem] border border-white/10 bg-white p-5 sm:p-6 text-slate-950 shadow-2xl">
+          <div className="mb-6 sm:mb-8">
             <p className="text-sm font-bold uppercase tracking-[0.2em] text-emerald-700">JIROLU</p>
             <h2 className="mt-3 text-3xl font-black tracking-tight">Masuk ke sistem</h2>
             <p className="mt-2 text-sm text-slate-500">

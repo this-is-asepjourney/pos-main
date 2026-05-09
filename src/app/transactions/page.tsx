@@ -344,9 +344,9 @@ export default function TransactionsPage() {
 
   return (
     <AppShell allowedRoles={["admin"]}>
-      <div className="grid gap-6 p-4 lg:grid-cols-1 xl:grid-cols-[minmax(0,1fr)_400px] xl:p-6">
+      <div className="grid gap-4 p-3 lg:gap-6 lg:p-4 xl:grid-cols-[minmax(0,1fr)_400px] xl:p-6">
         <section className="space-y-5">
-          <header className="rounded-[2rem] bg-white p-6 shadow-sm">
+          <header className="rounded-[1.5rem] lg:rounded-[2rem] bg-white p-4 lg:p-6 shadow-sm">
             <p className="flex items-center gap-2 text-sm font-bold uppercase tracking-[0.18em] text-cyan-700">
               <CalendarDays size={17} />
               History
