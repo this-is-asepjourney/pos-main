@@ -68,7 +68,9 @@ service cloud.firestore {
     }
 
     match /transactions/{transactionId} {
-      allow read: if isAdmin() || (signedIn() && resource.data.userId == request.auth.uid);
+      // Admin & cashier (staff) boleh membaca semua transaksi.
+      // Cashier butuh akses ini untuk halaman Pengembalian (query collection-level).
+      allow read: if isStaff();
       allow create: if signedIn() && request.resource.data.userId == request.auth.uid;
       allow update: if (
         isAdmin()

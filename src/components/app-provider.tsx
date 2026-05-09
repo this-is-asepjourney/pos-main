@@ -48,7 +48,7 @@ const withTimeout = async <T,>(promise: Promise<T>, timeoutMs: number): Promise<
 export function AppProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(isFirebaseConfigured);
-  const [role, setRole] = useState<UserRole>("admin");
+  const [role, setRole] = useState<UserRole>("cashier");
 
   useEffect(() => {
     if (!isFirebaseConfigured) {
