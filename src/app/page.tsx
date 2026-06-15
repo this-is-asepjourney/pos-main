@@ -17,7 +17,7 @@ import { SuccessPopup } from "@/components/success-popup";
 import { useAuth } from "@/components/app-provider";
 import { formatCurrency } from "@/lib/format";
 import { checkout } from "@/services/transaction-service";
-import { subscribeCategories, subscribeProducts } from "@/services/product-service";
+import { getProducts, getCategories } from "@/services/product-service";
 import type { CartItem, Category, PaymentMethod, Product } from "@/types/pos";
 import { clsx } from "clsx";
 
@@ -35,15 +35,22 @@ export default function CashierPage() {
   const [successPopup, setSuccessPopup] = useState("");
   const [cartSidebarOpen, setCartSidebarOpen] = useState(true);
 
-  useEffect(() => {
+  const fetchData = async () => {
     if (!tenantId) return;
-    const unsubscribeProducts = subscribeProducts(tenantId, setProducts);
-    const unsubscribeCategories = subscribeCategories(tenantId, setCategories);
+    try {
+      const [prods, cats] = await Promise.all([getProducts(), getCategories()]);
+      setProducts(prods);
+      setCategories(cats);
+    } catch (error) {
+      console.error("Gagal memuat data:", error);
+    }
+  };
 
-    return () => {
-      unsubscribeProducts();
-      unsubscribeCategories();
-    };
+  useEffect(() => {
+    fetchData();
+    const interval = setInterval(fetchData, 15000);
+    return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tenantId]);
 
   const filteredProducts = useMemo(() => {
@@ -120,7 +127,7 @@ export default function CashierPage() {
     setNotice(null);
 
     try {
-      const invoiceCode = await checkout(tenantId, {
+      const invoiceCode = await checkout({
         cart,
         totalPrice: total,
         paidAmount: effectivePaidAmount,
@@ -134,6 +141,8 @@ export default function CashierPage() {
       setSuccessPopup(successMessage);
       setCart([]);
       setPaidAmount(0);
+      // Refresh produk setelah checkout untuk update stok
+      fetchData();
     } catch (error) {
       setNotice({
         type: "error",

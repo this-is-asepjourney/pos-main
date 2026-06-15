@@ -8,16 +8,16 @@ import { useAuth } from "@/components/app-provider";
 
 export default function LoginPage() {
   const router = useRouter();
-  const { isConfigured, login, role, user, loading: authLoading } = useAuth();
+  const { login, role, user, loading: authLoading } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!isConfigured || authLoading || !user) return;
+    if (authLoading || !user) return;
     router.push(role === "cashier" ? "/" : "/dashboard");
-  }, [authLoading, isConfigured, role, router, user]);
+  }, [authLoading, role, router, user]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -48,7 +48,7 @@ export default function LoginPage() {
           </p>
         </div>
         <div className="relative grid grid-cols-3 gap-4">
-          {["Realtime", "Multi kasir", "Firestore"].map((item) => (
+          {["MySQL", "Multi kasir", "Next.js"].map((item) => (
             <div key={item} className="rounded-3xl bg-white/15 p-5 backdrop-blur">
               <p className="text-sm font-bold">{item}</p>
               <p className="mt-2 text-xs text-cyan-50">Ready to scale</p>
@@ -63,9 +63,7 @@ export default function LoginPage() {
             <p className="text-sm font-bold uppercase tracking-[0.2em] text-cyan-700">Bro-POS</p>
             <h2 className="mt-3 text-3xl font-black tracking-tight">Masuk ke sistem</h2>
             <p className="mt-2 text-sm text-slate-500">
-              {isConfigured
-                ? "Gunakan akun Firebase Auth yang sudah dibuat."
-                : "Firebase belum dikonfigurasi, tombol masuk akan membuka demo mode."}
+              Silakan login dengan email dan password Anda.
             </p>
           </div>
 
@@ -80,7 +78,7 @@ export default function LoginPage() {
                   onChange={(event) => setEmail(event.target.value)}
                   placeholder="admin@pos.test"
                   className="w-full bg-transparent py-3 outline-none"
-                  required={isConfigured}
+                  required
                 />
               </div>
             </label>
@@ -94,7 +92,7 @@ export default function LoginPage() {
                   onChange={(event) => setPassword(event.target.value)}
                   placeholder="password"
                   className="w-full bg-transparent py-3 outline-none"
-                  required={isConfigured}
+                  required
                 />
               </div>
             </label>
@@ -110,8 +108,17 @@ export default function LoginPage() {
               disabled={loading}
               className="w-full rounded-2xl bg-slate-950 px-5 py-4 font-black text-white transition hover:bg-cyan-600 disabled:bg-slate-300"
             >
-              {loading ? "Memeriksa..." : isConfigured ? "Masuk" : "Buka Demo"}
+              {loading ? "Memeriksa..." : "Masuk"}
             </button>
+            <div className="mt-4 text-center">
+              <button
+                type="button"
+                onClick={() => router.push("/onboarding")}
+                className="text-sm font-semibold text-cyan-700 hover:text-cyan-600"
+              >
+                Belum punya akun? Buat Toko Baru
+              </button>
+            </div>
           </form>
         </div>
       </section>

@@ -7,10 +7,9 @@ import { useAuth } from "@/components/app-provider";
 import { formatDateTime, toDate } from "@/lib/format";
 import {
   endShift,
+  getActiveShifts,
+  getAttendanceHistory,
   startShift,
-  subscribeActiveShifts,
-  subscribeAttendanceHistory,
-  subscribeMyActiveShift,
 } from "@/services/attendance-service";
 import type { ShiftAttendance } from "@/types/pos";
 
@@ -35,24 +34,29 @@ export default function AttendancePage() {
   const [message, setMessage] = useState("");
   const [processing, setProcessing] = useState(false);
 
-  useEffect(() => {
-    if (!tenantId || !user?.uid) return () => undefined;
-    return subscribeMyActiveShift(tenantId, user.uid, setMyShift);
-  }, [tenantId, user?.uid]);
+  const fetchData = async () => {
+    if (!tenantId || !user?.uid) return;
+    try {
+      const shifts = await getActiveShifts();
+      setActiveShifts(shifts);
+      const mine = shifts.find((s) => s.userId === user.uid) ?? null;
+      setMyShift(mine);
+
+      if (isManager) {
+        const history = await getAttendanceHistory(150);
+        setAttendanceHistory(history);
+      }
+    } catch (error) {
+      console.error("Gagal memuat data absensi:", error);
+    }
+  };
 
   useEffect(() => {
-    if (!tenantId || !isManager) {
-      return () => undefined;
-    }
-    return subscribeActiveShifts(tenantId, setActiveShifts);
-  }, [isManager, tenantId]);
-
-  useEffect(() => {
-    if (!tenantId || !isManager) {
-      return () => undefined;
-    }
-    return subscribeAttendanceHistory(tenantId, setAttendanceHistory, 150);
-  }, [isManager, tenantId]);
+    fetchData();
+    const interval = setInterval(fetchData, 15000);
+    return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tenantId, user?.uid, isManager]);
 
   const displayedActiveShifts = isManager ? activeShifts : myShift ? [myShift] : [];
 
@@ -63,8 +67,9 @@ export default function AttendancePage() {
     setMessage("");
 
     try {
-      await startShift(tenantId, user.uid, displayName, role, branchActive);
+      await startShift(user.uid, displayName, role, branchActive);
       setMessage("Shift berhasil dimulai.");
+      fetchData();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Gagal memulai shift.");
     } finally {
@@ -79,8 +84,9 @@ export default function AttendancePage() {
     setMessage("");
 
     try {
-      await endShift(tenantId, myShift.id);
+      await endShift(myShift.id);
       setMessage("Shift berhasil diakhiri.");
+      fetchData();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Gagal mengakhiri shift.");
     } finally {

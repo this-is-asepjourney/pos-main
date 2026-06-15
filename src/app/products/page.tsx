@@ -6,17 +6,16 @@ import { AppShell } from "@/components/app-shell";
 import { ProductImage } from "@/components/product-image";
 import { SuccessPopup } from "@/components/success-popup";
 import { useAuth } from "@/components/app-provider";
-import { isCloudinaryConfigured, uploadImageToCloudinary } from "@/lib/cloudinary";
 import { formatCurrency, formatDateTime } from "@/lib/format";
 import {
   createCategory,
   createProduct,
   deleteCategory,
   deleteProduct,
+  getCategories,
+  getProducts,
   importProduct,
   restockProduct,
-  subscribeCategories,
-  subscribeProducts,
   updateCategory,
   updateProduct,
 } from "@/services/product-service";
@@ -83,22 +82,28 @@ export default function ProductsPage() {
   const [restockQty, setRestockQty] = useState(1);
   const [restocking, setRestocking] = useState(false);
 
-  useEffect(() => {
+  const fetchData = async () => {
     if (!tenantId) return;
-    const unsubscribeProducts = subscribeProducts(tenantId, setProducts);
-    const unsubscribeCategories = subscribeCategories(tenantId, (items) => {
-      setCategories(items);
-      setForm((current) =>
-        current.categoryId || !items.length
-          ? current
-          : { ...current, categoryId: items[0].id, categoryName: items[0].name },
-      );
-    });
+    try {
+      const [prods, cats] = await Promise.all([getProducts(), getCategories()]);
+      setProducts(prods);
+      setCategories(cats);
+      // Set default category if form is empty
+      if (!form.categoryId && cats.length) {
+        setForm((current) =>
+          current.categoryId ? current : { ...current, categoryId: cats[0].id, categoryName: cats[0].name },
+        );
+      }
+    } catch (error) {
+      console.error("Gagal memuat data:", error);
+    }
+  };
 
-    return () => {
-      unsubscribeProducts();
-      unsubscribeCategories();
-    };
+  useEffect(() => {
+    fetchData();
+    const interval = setInterval(fetchData, 15000);
+    return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tenantId]);
 
   useEffect(() => {
@@ -146,7 +151,8 @@ export default function ProductsPage() {
     setSavingProduct(true);
 
     try {
-      const imageUrl = selectedImageFile ? await uploadImageToCloudinary(selectedImageFile) : form.imageUrl;
+      // For now, image upload is URL-based (paste URL)
+      const imageUrl = form.imageUrl;
       const payload: ProductInput = {
         ...form,
         imageUrl,
@@ -155,17 +161,18 @@ export default function ProductsPage() {
       };
 
       if (editingId) {
-        await updateProduct(tenantId, editingId, payload, branchActive);
+        await updateProduct(editingId, payload, branchActive);
         const successMessage = "Produk berhasil diperbarui.";
         setMessage(successMessage);
         setSuccessPopup(successMessage);
       } else {
-        await createProduct(tenantId, payload, branchActive);
+        await createProduct(payload, branchActive);
         const successMessage = "Produk berhasil ditambahkan.";
         setMessage(successMessage);
         setSuccessPopup(successMessage);
       }
       resetForm();
+      fetchData();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Produk gagal disimpan.");
     } finally {
@@ -179,14 +186,15 @@ export default function ProductsPage() {
 
     try {
       if (editingCategoryId) {
-        await updateCategory(tenantId, editingCategoryId, categoryName.trim());
+        await updateCategory(editingCategoryId, categoryName.trim());
         setMessage("Kategori berhasil diperbarui.");
       } else {
-        await createCategory(tenantId, categoryName.trim());
+        await createCategory(categoryName.trim());
         setMessage("Kategori berhasil ditambahkan.");
       }
       setCategoryName("");
       setEditingCategoryId(null);
+      fetchData();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Kategori gagal disimpan.");
     }
@@ -227,12 +235,13 @@ export default function ProductsPage() {
     setMessage("");
 
     try {
-      await restockProduct(tenantId, restockProductId, restockQty, branchActive);
+      await restockProduct(restockProductId, restockQty, branchActive);
       const product = products.find((item) => item.id === restockProductId);
       const successMessage = `${product?.name ?? "Produk"} berhasil direstock +${Math.floor(restockQty)} stok.`;
       setMessage(successMessage);
       setSuccessPopup(successMessage);
       cancelRestock();
+      fetchData();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Restock produk gagal.");
     } finally {
@@ -297,20 +306,20 @@ export default function ProductsPage() {
       const importItems = rows
         .map<ProductImportItem | null>((row, index) => {
           const name = readStringCell(row, "PRODUK");
-          const categoryName = readStringCell(row, "KATEGORI");
+          const catName = readStringCell(row, "KATEGORI");
           const stock = Math.max(0, Math.floor(readNumberCell(row, "STOK")));
           const price = Math.max(0, readNumberCell(row, "HARGA"));
           const createdAt = parseDateCell(getImportCell(row, "DIBUAT"));
 
-          if (!name && !categoryName) return null;
+          if (!name && !catName) return null;
           if (!name) throw new Error(`Baris ${index + 2}: PRODUK wajib diisi.`);
-          if (!categoryName) throw new Error(`Baris ${index + 2}: KATEGORI wajib diisi.`);
+          if (!catName) throw new Error(`Baris ${index + 2}: KATEGORI wajib diisi.`);
           if (price <= 0) throw new Error(`Baris ${index + 2}: HARGA harus lebih dari 0.`);
 
           const item: ProductImportItem = {
             name,
             categoryId: "",
-            categoryName,
+            categoryName: catName,
             stock,
             price,
             sku: readStringCell(row, "SKU"),
@@ -335,7 +344,7 @@ export default function ProductsPage() {
         let category = categoryMap.get(categoryKey);
 
         if (!category) {
-          const categoryRef = await createCategory(tenantId, item.categoryName);
+          const categoryRef = await createCategory(item.categoryName);
           category = {
             id: categoryRef.id,
             name: item.categoryName,
@@ -345,7 +354,6 @@ export default function ProductsPage() {
         }
 
         await importProduct(
-          tenantId,
           {
             name: item.name,
             price: item.price,
@@ -356,12 +364,12 @@ export default function ProductsPage() {
             sku: item.sku,
             barcode: item.barcode,
           },
-          item.createdAt,
           branchActive,
         );
       }
 
       setMessage(`${importItems.length} produk berhasil diimport dari Excel.`);
+      fetchData();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Import produk gagal.");
     } finally {
@@ -404,7 +412,7 @@ export default function ProductsPage() {
             </p>
             <h1 className="mt-3 text-3xl font-black tracking-tight">Manajemen produk</h1>
             <p className="mt-2 text-sm text-slate-300">
-              Kelola menu, harga, stok, SKU, barcode, dan kategori yang disimpan ke Firestore.
+              Kelola menu, harga, stok, SKU, barcode, dan kategori yang disimpan ke MySQL.
             </p>
           </div>
 
@@ -467,35 +475,16 @@ export default function ProductsPage() {
               />
             </div>
             <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-3">
-              <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-white px-4 py-3 text-sm font-bold text-slate-700">
-                {savingProduct && selectedImageFile ? (
-                  <>
-                    <LoaderCircle size={16} className="animate-spin" />
-                    Uploading saat simpan...
-                  </>
-                ) : (
-                  <>
-                    <ImageUp size={16} />
-                    Pilih Gambar Produk
-                  </>
-                )}
-                <input
-                  type="file"
-                  accept="image/*"
-                  disabled={savingProduct || !isCloudinaryConfigured}
-                  onChange={handleSelectImage}
-                  className="hidden"
-                />
-              </label>
-              {!isCloudinaryConfigured ? (
-                <p className="mt-2 text-xs font-semibold text-amber-700">
-                  Cloudinary belum aktif. Isi env Cloudinary agar gambar bisa diupload saat produk disimpan.
-                </p>
-              ) : null}
-              {selectedImagePreview || form.imageUrl ? (
+              <input
+                value={form.imageUrl ?? ""}
+                onChange={(event) => setForm((current) => ({ ...current, imageUrl: event.target.value }))}
+                placeholder="URL gambar produk (opsional)"
+                className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-cyan-300"
+              />
+              {form.imageUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
-                  src={selectedImagePreview || form.imageUrl}
+                  src={form.imageUrl}
                   alt="Preview produk"
                   className="mt-3 h-32 w-full rounded-xl object-cover"
                 />
@@ -608,11 +597,13 @@ export default function ProductsPage() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => {
-                      if (!tenantId) return;
-                      deleteCategory(tenantId, category.id).catch((error) =>
-                        setMessage(error instanceof Error ? error.message : "Kategori gagal dihapus."),
-                      );
+                    onClick={async () => {
+                      try {
+                        await deleteCategory(category.id);
+                        fetchData();
+                      } catch (error) {
+                        setMessage(error instanceof Error ? error.message : "Kategori gagal dihapus.");
+                      }
                     }}
                     className="rounded-full p-1 text-rose-600 hover:bg-rose-100"
                     aria-label={`Hapus kategori ${category.name}`}
@@ -689,11 +680,13 @@ export default function ProductsPage() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => {
-                      if (!tenantId) return;
-                      deleteProduct(tenantId, product.id).catch((error) =>
-                        setMessage(error instanceof Error ? error.message : "Produk gagal dihapus."),
-                      );
+                    onClick={async () => {
+                      try {
+                        await deleteProduct(product.id);
+                        fetchData();
+                      } catch (error) {
+                        setMessage(error instanceof Error ? error.message : "Produk gagal dihapus.");
+                      }
                     }}
                     className="rounded-xl bg-rose-100 px-3 py-2 font-bold text-rose-700"
                   >
@@ -786,9 +779,13 @@ export default function ProductsPage() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => {
-                          if (!tenantId) return;
-                          deleteProduct(tenantId, product.id).catch((error) => setMessage(error.message));
+                        onClick={async () => {
+                          try {
+                            await deleteProduct(product.id);
+                            fetchData();
+                          } catch (error) {
+                            setMessage(error instanceof Error ? error.message : "Produk gagal dihapus.");
+                          }
                         }}
                         className="ml-2 rounded-xl bg-rose-50 px-3 py-2 font-bold text-rose-700"
                       >

@@ -1,4 +1,4 @@
-import type { FirestoreDate } from "@/types/pos";
+import type { DateField } from "@/types/pos";
 
 export const formatCurrency = (value: number) =>
   new Intl.NumberFormat("id-ID", {
@@ -10,20 +10,20 @@ export const formatCurrency = (value: number) =>
 export const formatNumber = (value: number) =>
   new Intl.NumberFormat("id-ID").format(value);
 
-export const toDate = (value: FirestoreDate): Date => {
+export const toDate = (value: DateField): Date => {
   if (!value) return new Date();
   if (value instanceof Date) return value;
   if (typeof value === "string") return new Date(value);
-  return value.toDate();
+  return new Date();
 };
 
-export const formatDateTime = (value: FirestoreDate) =>
+export const formatDateTime = (value: DateField) =>
   new Intl.DateTimeFormat("id-ID", {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(toDate(value));
 
-export const formatShortDate = (value: FirestoreDate) =>
+export const formatShortDate = (value: DateField) =>
   new Intl.DateTimeFormat("id-ID", {
     day: "2-digit",
     month: "short",

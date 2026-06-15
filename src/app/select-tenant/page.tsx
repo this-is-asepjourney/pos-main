@@ -1,133 +1,138 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Store, User, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Building2, LogOut, Plus } from "lucide-react";
-import { BrandMark } from "@/components/brand-mark";
+import { AppShell } from "@/components/app-shell";
 import { useAuth } from "@/components/app-provider";
-import { getTenant } from "@/services/tenant-service";
-
-type TenantInfo = {
-  tenantId: string;
-  name: string;
-  role: string;
-};
+import { createTenantWithOwner } from "@/services/tenant-service";
+import { clsx } from "clsx";
 
 export default function SelectTenantPage() {
+  const { user, memberships, switchTenant, refreshMemberships, tenantId } = useAuth();
   const router = useRouter();
-  const { user, memberships, logout, switchTenant, loading, tenantId } = useAuth();
-  const [items, setItems] = useState<TenantInfo[]>([]);
-  const [busy, setBusy] = useState(false);
+  const [loadingId, setLoadingId] = useState<string | null>(null);
+  
+  const [showCreate, setShowCreate] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [creating, setCreating] = useState(false);
 
   useEffect(() => {
-    if (!user) return;
-    let cancelled = false;
-    Promise.all(
-      memberships.map(async (m) => {
-        const tenant = await getTenant(m.tenantId);
-        return {
-          tenantId: m.tenantId,
-          name: tenant?.name ?? m.tenantId,
-          role: m.role,
-        };
-      }),
-    ).then((list) => {
-      if (!cancelled) setItems(list);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [memberships, user]);
+    if (tenantId && !showCreate) {
+      router.push("/dashboard");
+    }
+  }, [tenantId, router, showCreate]);
 
-  const handlePick = async (next: string) => {
-    setBusy(true);
+  const handleSelect = async (id: string) => {
+    setLoadingId(id);
     try {
-      await switchTenant(next);
-      router.replace("/dashboard");
-    } finally {
-      setBusy(false);
+      await switchTenant(id);
+      router.push("/dashboard");
+    } catch {
+      setLoadingId(null);
     }
   };
 
-  const handleLogout = async () => {
-    await logout();
-    router.replace("/login");
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCreating(true);
+    try {
+      const newTenantId = await createTenantWithOwner(newName);
+      await refreshMemberships();
+      await switchTenant(newTenantId);
+      router.push("/dashboard");
+    } catch (err) {
+      console.error(err);
+      setCreating(false);
+    }
   };
 
-  if (loading) {
-    return (
-      <main className="grid min-h-screen place-items-center bg-slate-950 text-slate-200">
-        <p className="text-sm font-semibold">Memuat sesi...</p>
-      </main>
-    );
-  }
+  if (!user) return null;
 
   return (
-    <main className="grid min-h-screen place-items-center bg-slate-950 p-6 text-white">
-      <div className="w-full max-w-2xl space-y-6 rounded-[2rem] border border-white/10 bg-white/5 p-8 backdrop-blur">
-        <div className="flex items-center justify-between">
-          <BrandMark textClassName="text-white" />
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="flex items-center gap-2 rounded-2xl bg-white/10 px-3 py-2 text-xs font-semibold text-slate-200 hover:bg-white/15"
-          >
-            <LogOut size={14} />
-            Keluar
-          </button>
-        </div>
-
-        <div>
-          <p className="text-xs font-bold uppercase tracking-[0.2em] text-cyan-300">Pilih toko</p>
-          <h1 className="mt-3 text-3xl font-black tracking-tight">
-            Anda anggota di {items.length} toko
-          </h1>
-          <p className="mt-2 text-sm text-slate-300">
-            Pilih salah satu untuk masuk. Toko yang sedang aktif ditandai khusus.
+    <AppShell>
+      <div className="mx-auto max-w-3xl p-6 lg:p-10">
+        <header className="mb-10 text-center">
+          <h1 className="text-3xl font-black tracking-tight">Pilih Toko</h1>
+          <p className="mt-2 text-slate-500">
+            Anda terdaftar di beberapa toko. Pilih toko untuk melanjutkan.
           </p>
+        </header>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          {memberships.map((membership) => (
+            <button
+              key={membership.tenantId}
+              type="button"
+              onClick={() => handleSelect(membership.tenantId)}
+              disabled={Boolean(loadingId)}
+              className={clsx(
+                "flex flex-col items-start rounded-3xl border bg-white p-6 text-left shadow-sm transition hover:border-cyan-300 hover:shadow-md disabled:opacity-50",
+                membership.tenantId === tenantId ? "border-cyan-400 ring-2 ring-cyan-100" : "border-slate-200"
+              )}
+            >
+              <div className="flex w-full items-start justify-between">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-50 text-cyan-600">
+                  <Store size={24} />
+                </div>
+                <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">
+                  {membership.role}
+                </span>
+              </div>
+              <h2 className="mt-4 text-xl font-bold">{membership.tenantName || membership.tenantId}</h2>
+              <p className="mt-1 flex items-center gap-2 text-sm font-semibold text-slate-500">
+                <User size={14} />
+                {membership.branchIds.includes("*")
+                  ? "Semua Cabang"
+                  : `${membership.branchIds.length} Cabang`}
+              </p>
+              {loadingId === membership.tenantId ? (
+                <p className="mt-4 text-sm font-semibold text-cyan-600">Membuka toko...</p>
+              ) : null}
+            </button>
+          ))}
         </div>
 
-        <div className="space-y-3">
-          {items.length === 0 ? (
-            <div className="rounded-3xl border border-dashed border-white/15 p-8 text-center text-sm text-slate-400">
-              Anda belum tergabung dalam toko apa pun.
-            </div>
+        <div className="mt-10">
+          {!showCreate ? (
+            <button
+              type="button"
+              onClick={() => setShowCreate(true)}
+              className="mx-auto flex items-center gap-2 rounded-2xl border-2 border-dashed border-slate-300 px-6 py-4 text-sm font-bold text-slate-500 transition hover:border-slate-400 hover:text-slate-700"
+            >
+              <Plus size={18} />
+              Buat Toko Baru
+            </button>
           ) : (
-            items.map((item) => (
-              <button
-                key={item.tenantId}
-                type="button"
-                disabled={busy}
-                onClick={() => handlePick(item.tenantId)}
-                className="flex w-full items-center justify-between gap-4 rounded-3xl border border-white/10 bg-slate-950/60 p-5 text-left transition hover:border-cyan-300/40 hover:bg-slate-900 disabled:opacity-50"
-              >
-                <div className="flex items-center gap-4">
-                  <span className="flex size-12 items-center justify-center rounded-2xl bg-cyan-400/20 text-cyan-300">
-                    <Building2 size={22} />
-                  </span>
-                  <div>
-                    <p className="text-lg font-black">{item.name}</p>
-                    <p className="text-xs uppercase tracking-[0.18em] text-cyan-200">
-                      {item.role}
-                      {tenantId === item.tenantId ? " • aktif" : ""}
-                    </p>
-                  </div>
-                </div>
-                <ArrowRight size={20} className="text-slate-400" />
-              </button>
-            ))
+            <form onSubmit={handleCreate} className="mx-auto max-w-sm rounded-3xl bg-white p-6 shadow-sm">
+              <h3 className="mb-4 text-lg font-bold">Buat Toko Baru</h3>
+              <input
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                placeholder="Nama Toko"
+                className="mb-4 w-full rounded-2xl border bg-slate-50 px-4 py-3 outline-none focus:border-cyan-400"
+                required
+              />
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowCreate(false)}
+                  className="flex-1 rounded-2xl bg-slate-100 py-3 font-bold text-slate-600"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={creating}
+                  className="flex-1 rounded-2xl bg-slate-950 py-3 font-bold text-white"
+                >
+                  {creating ? "Membuat..." : "Buat"}
+                </button>
+              </div>
+            </form>
           )}
         </div>
-
-        <button
-          type="button"
-          onClick={() => router.push("/onboarding")}
-          className="flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-cyan-300/30 bg-cyan-300/10 px-4 py-3 text-sm font-black text-cyan-100"
-        >
-          <Plus size={16} />
-          Buat toko baru
-        </button>
       </div>
-    </main>
+    </AppShell>
   );
 }

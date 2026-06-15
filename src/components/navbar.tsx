@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import {
   BarChart3,
   Boxes,
@@ -10,6 +10,7 @@ import {
   LogOut,
   ReceiptText,
   ShoppingCart,
+  ShieldCheck,
 } from "lucide-react";
 import { useAuth } from "@/components/app-provider";
 import { BrandMark } from "@/components/brand-mark";
@@ -29,19 +30,17 @@ const navItems = [
 
 export function Navbar() {
   const pathname = usePathname();
-  const router = useRouter();
   const {
     displayName,
-    isConfigured,
     logout,
     role,
     tenantId,
     memberships,
+    isSuperAdmin,
   } = useAuth();
 
   const handleLogout = async () => {
     await logout();
-    router.push("/login");
   };
 
   const activeMembership = memberships.find((m) => m.tenantId === tenantId);
@@ -52,11 +51,6 @@ export function Navbar() {
         <Link href="/" aria-label="Bro-POS home">
           <BrandMark textClassName="text-white" />
         </Link>
-        {!isConfigured ? (
-          <span className="rounded-full border border-amber-300/30 bg-amber-300/10 px-3 py-1 text-xs font-semibold text-amber-200 lg:mt-5 lg:inline-block">
-            Demo mode
-          </span>
-        ) : null}
       </div>
 
       {tenantId ? (
@@ -98,6 +92,17 @@ export function Navbar() {
               </Link>
             );
           })}
+        {isSuperAdmin ? (
+          <div className="mt-4 border-t border-white/10 pt-4 hidden lg:block">
+            <Link
+              href="/admin"
+              className="flex min-w-max items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold text-emerald-400 hover:bg-white/10 transition"
+            >
+              <ShieldCheck size={18} />
+              Admin Panel
+            </Link>
+          </div>
+        ) : null}
       </nav>
 
       <div className="rounded-2xl border border-white/10 bg-white/5 p-3 lg:hidden">

@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  output: "export",
+  // Server mode — butuh API routes untuk MySQL
 };
 
 export default nextConfig;

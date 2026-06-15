@@ -1,11 +1,9 @@
-import type { Timestamp } from "firebase/firestore";
-
 export type TenantRole = "owner" | "admin" | "cashier";
 // Backward compatibility — beberapa komponen masih memakai `UserRole`.
 // Owner mewarisi semua kemampuan admin.
 export type UserRole = TenantRole;
 
-export type FirestoreDate = Date | Timestamp | string | null;
+export type DateField = Date | string | null;
 
 export type TenantStatus = "trial" | "active" | "suspended";
 
@@ -26,8 +24,8 @@ export type Tenant = {
   plan: "free" | "pro" | "business";
   branchCount: number;
   settings: TenantSettings;
-  createdAt: FirestoreDate;
-  updatedAt?: FirestoreDate;
+  createdAt: DateField;
+  updatedAt?: DateField;
 };
 
 export type Branch = {
@@ -36,7 +34,7 @@ export type Branch = {
   address?: string;
   phone?: string;
   isActive: boolean;
-  createdAt: FirestoreDate;
+  createdAt: DateField;
 };
 
 export type Member = {
@@ -47,7 +45,7 @@ export type Member = {
   role: TenantRole;
   branchIds: string[];
   status: "active" | "disabled";
-  joinedAt: FirestoreDate;
+  joinedAt: DateField;
 };
 
 export type GlobalUser = {
@@ -56,7 +54,7 @@ export type GlobalUser = {
   name: string;
   defaultTenantId: string | null;
   tenantIds: string[];
-  createdAt: FirestoreDate;
+  createdAt: DateField;
 };
 
 export type UserProfile = {
@@ -64,7 +62,7 @@ export type UserProfile = {
   name: string;
   email: string;
   role: TenantRole;
-  createdAt: FirestoreDate;
+  createdAt: DateField;
 };
 
 export type ShiftStatus = "active" | "closed";
@@ -78,14 +76,14 @@ export type ShiftAttendance = {
   status: ShiftStatus;
   openingCash?: number;
   closingCash?: number;
-  startedAt: FirestoreDate;
-  endedAt?: FirestoreDate;
+  startedAt: DateField;
+  endedAt?: DateField;
 };
 
 export type Category = {
   id: string;
   name: string;
-  createdAt: FirestoreDate;
+  createdAt: DateField;
 };
 
 export type Product = {
@@ -102,8 +100,8 @@ export type Product = {
   isActive?: boolean;
   stockByBranch?: Record<string, number>;
   totalStock?: number;
-  createdAt: FirestoreDate;
-  updatedAt?: FirestoreDate;
+  createdAt: DateField;
+  updatedAt?: DateField;
 };
 
 export type ProductInput = {
@@ -154,8 +152,8 @@ export type PosTransaction = {
   items: TransactionItem[];
   dateKey?: string;
   monthKey?: string;
-  createdAt: FirestoreDate;
-  updatedAt?: FirestoreDate;
+  createdAt: DateField;
+  updatedAt?: DateField;
 };
 
 export type TransactionUpdateInput = {
@@ -192,12 +190,12 @@ export type Subscription = {
   tenantId: string;
   planId: string;
   status: SubscriptionStatus;
-  trialEndsAt?: FirestoreDate;
-  currentPeriodStart: FirestoreDate;
-  currentPeriodEnd: FirestoreDate;
+  trialEndsAt?: DateField;
+  currentPeriodStart: DateField;
+  currentPeriodEnd: DateField;
   paymentMethod?: "midtrans" | "xendit" | "manual";
-  lastPaymentAt?: FirestoreDate;
-  cancelledAt?: FirestoreDate;
+  lastPaymentAt?: DateField;
+  cancelledAt?: DateField;
 };
 
 export type Plan = {
@@ -219,4 +217,54 @@ export type Plan = {
     loyalty: boolean;
   };
   isActive: boolean;
+};
+
+// Admin Types
+export type AdminStats = {
+  totalTenants: number;
+  totalUsers: number;
+  totalRevenue: number;
+  activeSubscriptions: number;
+};
+
+export type AdminTenant = {
+  id: string;
+  name: string;
+  slug: string;
+  ownerUid: string;
+  ownerName: string;
+  ownerEmail: string;
+  status: TenantStatus;
+  plan: string;
+  memberCount: number;
+  productCount: number;
+  totalRevenue: number;
+  createdAt: DateField;
+};
+
+export type AdminUser = {
+  id: string;
+  name: string;
+  email: string;
+  isSuperadmin: boolean;
+  tenantCount: number;
+  createdAt: DateField;
+};
+
+export type AdminPlan = {
+  id: string;
+  name: string;
+  priceIdr: number;
+  billingInterval: "monthly" | "yearly";
+  maxBranches: number;
+  maxProducts: number;
+  maxUsers: number;
+  transactionsPerMonth: number;
+  featureMultiBranch: boolean;
+  featureAdvancedReports: boolean;
+  featureExcelExport: boolean;
+  featureApiAccess: boolean;
+  featureLoyalty: boolean;
+  isActive: boolean;
+  createdAt: DateField;
 };

@@ -20,23 +20,23 @@ const isRoleAllowed = (role: TenantRole, allowed: TenantRole[]) => {
 };
 
 export function AppShell({ children, allowedRoles }: AppShellProps) {
-  const { user, role, isConfigured, loading, tenantId, needsOnboarding } = useAuth();
+  const { user, role, loading, tenantId, needsOnboarding } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
     if (loading) return;
 
-    if (isConfigured && !user) {
+    if (!user) {
       router.replace("/login");
       return;
     }
 
-    if (isConfigured && user && needsOnboarding) {
+    if (user && needsOnboarding) {
       router.replace("/onboarding");
       return;
     }
 
-    if (isConfigured && user && !tenantId && !needsOnboarding) {
+    if (user && !tenantId && !needsOnboarding) {
       router.replace("/select-tenant");
       return;
     }
@@ -44,7 +44,7 @@ export function AppShell({ children, allowedRoles }: AppShellProps) {
     if (allowedRoles?.length && !isRoleAllowed(role, allowedRoles)) {
       router.replace(role === "cashier" ? "/" : "/dashboard");
     }
-  }, [allowedRoles, isConfigured, loading, needsOnboarding, role, router, tenantId, user]);
+  }, [allowedRoles, loading, needsOnboarding, role, router, tenantId, user]);
 
   if (loading) {
     return (
@@ -54,7 +54,7 @@ export function AppShell({ children, allowedRoles }: AppShellProps) {
     );
   }
 
-  if (isConfigured && !user) {
+  if (!user) {
     return (
       <div className="grid min-h-screen place-items-center bg-slate-100">
         <p className="text-sm font-semibold text-slate-500">Mengalihkan ke halaman login...</p>
@@ -62,7 +62,7 @@ export function AppShell({ children, allowedRoles }: AppShellProps) {
     );
   }
 
-  if (isConfigured && user && (needsOnboarding || !tenantId)) {
+  if (user && (needsOnboarding || !tenantId)) {
     return (
       <div className="grid min-h-screen place-items-center bg-slate-100">
         <p className="text-sm font-semibold text-slate-500">Menyiapkan toko Anda...</p>
