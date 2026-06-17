@@ -10,6 +10,7 @@ import {
   ShieldCheck,
   TrendingUp,
   UsersRound,
+  Wallet,
   Zap,
 } from "lucide-react";
 import { AdminShell } from "@/components/admin-shell";
@@ -85,9 +86,9 @@ export default function AdminDashboardPage() {
         </div>
 
         {/* Stat Cards */}
-        <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 xl:grid-cols-5 gap-4">
           {loading ? (
-            Array.from({ length: 4 }).map((_, i) => (
+            Array.from({ length: 5 }).map((_, i) => (
               <div key={i} className="h-28 rounded-3xl bg-slate-100 animate-pulse" />
             ))
           ) : (
@@ -122,6 +123,15 @@ export default function AdminDashboardPage() {
                 icon={<ShieldCheck size={20} />}
                 gradient="from-amber-500 to-orange-500"
                 href="/admin/plans"
+              />
+              <StatCard
+                label="Pending Request"
+                value={stats?.pendingRequests ?? 0}
+                sub={(stats?.pendingRequests ?? 0) > 0 ? "⚡ Perlu ditinjau" : "Semua diproses"}
+                icon={<Wallet size={20} />}
+                gradient="from-rose-500 to-pink-500"
+                href="/admin/payments"
+                pulse={(stats?.pendingRequests ?? 0) > 0}
               />
             </>
           )}
@@ -243,11 +253,12 @@ export default function AdminDashboardPage() {
         </div>
 
         {/* Quick Links */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
           {[
             { href: "/admin/tenants", label: "Kelola Tenants", desc: "Lihat dan edit semua toko", icon: Building2, color: "from-teal-500 to-emerald-500" },
             { href: "/admin/users", label: "Kelola Users", desc: "Detail user dan privilege", icon: UsersRound, color: "from-indigo-500 to-purple-500" },
             { href: "/admin/plans", label: "Kelola Plans", desc: "Harga dan fitur paket", icon: CreditCard, color: "from-amber-500 to-orange-500" },
+            { href: "/admin/payments", label: "Pembayaran", desc: "Monitor & aktivasi subscription", icon: Wallet, color: "from-rose-500 to-pink-500" },
           ].map(({ href, label, desc, icon: Icon, color }) => (
             <Link key={href} href={href}
               className="flex items-center gap-4 rounded-3xl border border-slate-100 bg-white p-5 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition group">
@@ -274,6 +285,7 @@ function StatCard({
   icon,
   gradient,
   href,
+  pulse,
 }: {
   label: string;
   value: string | number;
@@ -281,6 +293,7 @@ function StatCard({
   icon: React.ReactNode;
   gradient: string;
   href?: string;
+  pulse?: boolean;
 }) {
   const inner = (
     <div className="rounded-3xl border border-slate-100 bg-white p-5 shadow-sm hover:shadow-md transition hover:-translate-y-0.5 group">
@@ -288,7 +301,10 @@ function StatCard({
         <div className={clsx("size-11 rounded-2xl bg-gradient-to-br flex items-center justify-center text-white", gradient)}>
           {icon}
         </div>
-        {href && <ChevronRight size={14} className="text-slate-300 group-hover:text-slate-500 transition" />}
+        <div className="flex items-center gap-1.5">
+          {pulse && <span className="size-2 rounded-full bg-rose-500 animate-pulse" />}
+          {href && <ChevronRight size={14} className="text-slate-300 group-hover:text-slate-500 transition" />}
+        </div>
       </div>
       <p className="mt-4 text-3xl font-black tracking-tight text-slate-950 truncate">{value}</p>
       <div className="flex items-center justify-between mt-1">

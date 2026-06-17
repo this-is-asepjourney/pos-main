@@ -184,7 +184,7 @@ export type DashboardStats = {
   recentTransactions: PosTransaction[];
 };
 
-export type SubscriptionStatus = "trial" | "active" | "past_due" | "cancelled";
+export type SubscriptionStatus = "trial" | "active" | "past_due" | "cancelled" | "pending_approval";
 
 export type Subscription = {
   tenantId: string;
@@ -225,6 +225,7 @@ export type AdminStats = {
   totalUsers: number;
   totalRevenue: number;
   activeSubscriptions: number;
+  pendingRequests: number;
 };
 
 export type AdminTenant = {
@@ -268,3 +269,25 @@ export type AdminPlan = {
   isActive: boolean;
   createdAt: DateField;
 };
+
+// Subscription Request Types
+export type SubscriptionRequestStatus = "pending" | "approved" | "rejected" | "cancelled";
+
+export type SubscriptionRequest = {
+  id: string;
+  tenantId: string;
+  tenantName: string;
+  requestedPlanId: string;
+  requestedPlanName: string;
+  currentPlanId: string;
+  paymentMethod: string;
+  paymentProofNote?: string;
+  amountIdr: number;
+  status: SubscriptionRequestStatus;
+  adminNote?: string;
+  approvedBy?: string;
+  approvedAt?: DateField;
+  rejectedAt?: DateField;
+  createdAt: DateField;
+};
+

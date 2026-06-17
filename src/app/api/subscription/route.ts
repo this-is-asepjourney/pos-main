@@ -3,7 +3,7 @@ import pool from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import type { RowDataPacket } from "mysql2";
 
-/** GET /api/subscription — returns current tenant's subscription + available plans */
+/** GET /api/subscription — returns current tenant's subscription + available plans + pending request */
 export async function GET() {
   try {
     const session = await getSession();
@@ -53,6 +53,18 @@ export async function GET() {
       [session.tenantId]
     );
 
+    // Pending subscription request
+    const [pendingReqs] = await pool.query<RowDataPacket[]>(
+      `SELECT id, requested_plan_id as requestedPlanId, requested_plan_name as requestedPlanName,
+              payment_method as paymentMethod, amount_idr as amountIdr, status,
+              created_at as createdAt
+       FROM subscription_requests
+       WHERE tenant_id = ? AND status = 'pending'
+       ORDER BY created_at DESC
+       LIMIT 1`,
+      [session.tenantId]
+    );
+
     return NextResponse.json({
       subscription: subs[0] ?? null,
       plans: plans.map(p => ({
@@ -64,6 +76,7 @@ export async function GET() {
         featureLoyalty: Boolean(p.featureLoyalty),
       })),
       recentActivity: payments,
+      pendingRequest: pendingReqs[0] ?? null,
     });
   } catch (error) {
     console.error("Subscription GET error:", error);

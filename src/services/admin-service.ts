@@ -96,6 +96,36 @@ export const deleteAdminPlan = (id: string) =>
     method: "DELETE",
   });
 
+// Subscription Requests
+export const getSubscriptionRequests = (status?: string, search?: string) => {
+  const params = new URLSearchParams();
+  if (status && status !== "all") params.set("status", status);
+  if (search) params.set("search", search);
+  const qs = params.toString();
+  return fetchApi<{
+    requests: AdminSubscriptionRequest[];
+    stats: AdminRequestStats;
+  }>(`/api/admin/subscription-requests${qs ? `?${qs}` : ""}`);
+};
+
+export const approveSubscriptionRequest = (
+  id: string,
+  payload: { paymentMethod?: string; adminNote?: string }
+) =>
+  fetchApi<{ success: boolean; message: string }>(
+    `/api/admin/subscription-requests/${id}/approve`,
+    { method: "POST", body: JSON.stringify(payload) }
+  );
+
+export const rejectSubscriptionRequest = (
+  id: string,
+  payload: { adminNote?: string }
+) =>
+  fetchApi<{ success: boolean; message: string }>(
+    `/api/admin/subscription-requests/${id}/reject`,
+    { method: "POST", body: JSON.stringify(payload) }
+  );
+
 // Extended types for detail views
 export type AdminUserDetail = {
   id: string;
@@ -179,3 +209,37 @@ export type AdminTransaction = {
   status: string;
   createdAt: string;
 };
+
+export type AdminSubscriptionRequest = {
+  id: string;
+  tenantId: string;
+  tenantName: string;
+  requestedPlanId: string;
+  requestedPlanName: string;
+  currentPlanId: string;
+  paymentMethod: string;
+  paymentProofNote: string | null;
+  amountIdr: number;
+  status: "pending" | "approved" | "rejected" | "cancelled";
+  adminNote: string | null;
+  approvedBy: string | null;
+  approvedByName: string | null;
+  approvedAt: string | null;
+  rejectedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  tenantSlug: string;
+  tenantCurrentPlan: string;
+  tenantStatus: string;
+  ownerName: string;
+  ownerEmail: string;
+};
+
+export type AdminRequestStats = {
+  total: number;
+  pending: number;
+  approved: number;
+  rejected: number;
+  totalApprovedRevenue: number;
+};
+

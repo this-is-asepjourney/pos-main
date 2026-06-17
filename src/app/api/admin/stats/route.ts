@@ -18,12 +18,16 @@ export async function GET() {
     const [subRows] = await pool.query<RowDataPacket[]>(
       "SELECT COUNT(*) as count FROM subscriptions WHERE status = 'active'",
     );
+    const [pendingRows] = await pool.query<RowDataPacket[]>(
+      "SELECT COUNT(*) as count FROM subscription_requests WHERE status = 'pending'",
+    );
 
     return NextResponse.json({
       totalTenants: Number(tenantRows[0]?.count ?? 0),
       totalUsers: Number(userRows[0]?.count ?? 0),
       totalRevenue: Number(revenueRows[0]?.total ?? 0),
       activeSubscriptions: Number(subRows[0]?.count ?? 0),
+      pendingRequests: Number(pendingRows[0]?.count ?? 0),
     });
   } catch (error) {
     console.error("Admin stats error:", error);
@@ -33,3 +37,4 @@ export async function GET() {
     );
   }
 }
+

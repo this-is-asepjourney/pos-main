@@ -12,6 +12,7 @@ import {
   Store,
   UsersRound,
   ChevronRight,
+  Wallet,
 } from "lucide-react";
 import { useAuth } from "@/components/app-provider";
 import { BrandMark } from "@/components/brand-mark";
@@ -22,6 +23,7 @@ const navItems = [
   { href: "/admin/tenants", label: "Tenants", icon: Building2, exact: false },
   { href: "/admin/users", label: "Users", icon: UsersRound, exact: false },
   { href: "/admin/plans", label: "Plans", icon: CreditCard, exact: false },
+  { href: "/admin/payments", label: "Pembayaran", icon: Wallet, exact: false },
 ];
 
 export function AdminShell({ children }: { children: ReactNode }) {

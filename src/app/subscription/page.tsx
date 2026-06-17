@@ -10,6 +10,7 @@ import {
   BarChart3,
   Check,
   CheckCircle2,
+  Clock,
   CreditCard,
   FileSpreadsheet,
   Gift,
@@ -25,7 +26,8 @@ import {
   X,
   Zap,
   Star,
-  Clock,
+  Send,
+  Hourglass,
 } from "lucide-react";
 import { clsx } from "clsx";
 
@@ -61,6 +63,16 @@ type Subscription = {
   txThisMonth: number;
 };
 
+type PendingRequest = {
+  id: string;
+  requestedPlanName: string;
+  requestedPlanId: string;
+  paymentMethod: string;
+  amountIdr: number;
+  status: string;
+  createdAt: string;
+};
+
 // ─── Plan visual config ───────────────────────────────────────────────────────
 const planMeta: Record<string, {
   gradient: string; icon: React.ElementType; accent: string; badgeText?: string; recommended?: boolean
@@ -82,10 +94,17 @@ const featureDefs = [
 ] as const;
 
 const statusColors: Record<string, string> = {
-  active:   "bg-emerald-100 text-emerald-700",
-  trial:    "bg-cyan-100 text-cyan-700",
-  past_due: "bg-orange-100 text-orange-700",
-  cancelled:"bg-slate-100 text-slate-500",
+  active:           "bg-emerald-100 text-emerald-700",
+  trial:            "bg-cyan-100 text-cyan-700",
+  past_due:         "bg-orange-100 text-orange-700",
+  cancelled:        "bg-slate-100 text-slate-500",
+  pending_approval: "bg-amber-100 text-amber-700",
+};
+
+const methodLabels: Record<string, string> = {
+  transfer: "🏦 Transfer Bank",
+  qris:     "📱 QRIS",
+  manual:   "📞 Manual",
 };
 
 // ─── Payment Modal ────────────────────────────────────────────────────────────
@@ -97,21 +116,25 @@ function PaymentModal({
 }: {
   plan: Plan;
   currentPlanId: string;
-  onConfirm: (planId: string, method: string) => Promise<void>;
+  onConfirm: (planId: string, method: string, proofNote: string) => Promise<{ requiresApproval: boolean }>;
   onClose: () => void;
 }) {
   const [method, setMethod] = useState<"transfer" | "qris" | "manual">("transfer");
-  const [step, setStep] = useState<"choose" | "confirm" | "processing" | "done">("choose");
+  const [proofNote, setProofNote] = useState("");
+  const [step, setStep] = useState<"choose" | "confirm" | "processing" | "done" | "pending">("choose");
   const [error, setError] = useState("");
-  const isDowngrade = plan.priceIdr === 0;
   const isFree = plan.priceIdr === 0;
 
   const handlePay = async () => {
     setStep("processing");
     setError("");
     try {
-      await onConfirm(plan.id, isFree ? "free" : method);
-      setStep("done");
+      const result = await onConfirm(plan.id, isFree ? "free" : method, proofNote);
+      if (result.requiresApproval) {
+        setStep("pending");
+      } else {
+        setStep("done");
+      }
     } catch (e: any) {
       setError(e.message);
       setStep("confirm");
@@ -146,7 +169,7 @@ function PaymentModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm" onClick={step !== "processing" ? onClose : undefined} />
 
-      <div className="relative w-full max-w-md rounded-3xl bg-white shadow-2xl overflow-hidden">
+      <div className="relative w-full max-w-md rounded-3xl bg-white shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="bg-gradient-to-br from-indigo-600 to-purple-700 px-6 py-5 text-white">
           <div className="flex items-center justify-between">
@@ -156,7 +179,7 @@ function PaymentModal({
               </div>
               <div>
                 <p className="font-black text-lg">{isFree ? "Ganti ke Free" : `Upgrade ke ${plan.name}`}</p>
-                <p className="text-indigo-200 text-xs">{isFree ? "Downgrade plan" : "Aktifkan berlangganan"}</p>
+                <p className="text-indigo-200 text-xs">{isFree ? "Downgrade plan" : "Ajukan berlangganan"}</p>
               </div>
             </div>
             {step !== "processing" && (
@@ -168,7 +191,7 @@ function PaymentModal({
         </div>
 
         <div className="px-6 py-5">
-          {/* Done State */}
+          {/* Done State (instant — free plan) */}
           {step === "done" && (
             <div className="text-center py-6">
               <div className="size-16 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-4">
@@ -176,9 +199,7 @@ function PaymentModal({
               </div>
               <h3 className="text-xl font-black text-slate-900 mb-2">Berhasil!</h3>
               <p className="text-sm text-slate-600 mb-6">
-                {isFree
-                  ? "Plan Anda telah diturunkan ke Free."
-                  : `Plan ${plan.name} telah diaktifkan. Selamat menikmati fitur baru!`}
+                Plan Anda telah diturunkan ke Free.
               </p>
               <button onClick={onClose}
                 className="w-full rounded-2xl bg-emerald-600 py-3 text-sm font-bold text-white hover:bg-emerald-700 transition">
@@ -187,11 +208,37 @@ function PaymentModal({
             </div>
           )}
 
+          {/* Pending Approval State */}
+          {step === "pending" && (
+            <div className="text-center py-6">
+              <div className="size-16 rounded-full bg-amber-100 flex items-center justify-center mx-auto mb-4">
+                <Hourglass size={32} className="text-amber-600" />
+              </div>
+              <h3 className="text-xl font-black text-slate-900 mb-2">Permintaan Terkirim!</h3>
+              <p className="text-sm text-slate-600 mb-2">
+                Permintaan upgrade ke <strong>{plan.name}</strong> telah dikirim.
+              </p>
+              <p className="text-sm text-slate-500 mb-6">
+                Admin akan meninjau dan mengkonfirmasi pembayaran Anda. Anda akan mendapat notifikasi saat plan diaktifkan.
+              </p>
+              <div className="rounded-2xl bg-amber-50 border border-amber-200 px-4 py-3 mb-5 flex gap-2 items-start">
+                <Clock size={14} className="text-amber-600 flex-shrink-0 mt-0.5" />
+                <p className="text-xs text-amber-700 font-medium text-left">
+                  Proses verifikasi biasanya memakan waktu 1x24 jam kerja. Jika ada pertanyaan, hubungi admin.
+                </p>
+              </div>
+              <button onClick={onClose}
+                className="w-full rounded-2xl bg-amber-600 py-3 text-sm font-bold text-white hover:bg-amber-700 transition">
+                Mengerti
+              </button>
+            </div>
+          )}
+
           {/* Processing */}
           {step === "processing" && (
             <div className="text-center py-10">
               <Loader2 size={40} className="animate-spin text-indigo-500 mx-auto mb-4" />
-              <p className="font-bold text-slate-700">Memproses permintaan…</p>
+              <p className="font-bold text-slate-700">Mengirim permintaan…</p>
               <p className="text-xs text-slate-400 mt-1">Mohon tunggu sebentar</p>
             </div>
           )}
@@ -235,6 +282,23 @@ function PaymentModal({
               <div className="rounded-2xl bg-blue-50 border border-blue-100 px-4 py-3 mb-5 flex gap-2">
                 <AlertTriangle size={14} className="text-blue-500 flex-shrink-0 mt-0.5" />
                 <p className="text-xs text-blue-700 font-medium">{methods.find(m => m.id === method)?.detail}</p>
+              </div>
+
+              {/* Payment proof note */}
+              <div className="mb-5">
+                <label className="text-xs font-black uppercase tracking-widest text-slate-400 block mb-2">
+                  Catatan Pembayaran (opsional)
+                </label>
+                <textarea
+                  value={proofNote}
+                  onChange={(e) => setProofNote(e.target.value)}
+                  placeholder="Contoh: Transfer dari BCA a/n Asep, Rp 99.000 pada 17 Jun 2026"
+                  rows={3}
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none resize-none placeholder:text-slate-400"
+                />
+                <p className="text-[10px] text-slate-400 mt-1">
+                  Informasi ini akan dikirim ke admin untuk mempercepat proses verifikasi.
+                </p>
               </div>
 
               <button onClick={() => setStep("confirm")}
@@ -286,6 +350,14 @@ function PaymentModal({
                 </div>
               </div>
 
+              {/* Important notice */}
+              <div className="rounded-2xl bg-amber-50 border border-amber-200 px-4 py-3 mb-5 flex gap-2">
+                <Clock size={14} className="text-amber-600 flex-shrink-0 mt-0.5" />
+                <p className="text-xs text-amber-700 font-medium">
+                  Setelah mengirim permintaan, admin akan memverifikasi pembayaran dan mengaktifkan plan Anda.
+                </p>
+              </div>
+
               {error && (
                 <div className="rounded-xl bg-rose-50 border border-rose-100 px-4 py-2 mb-4 text-sm text-rose-700 font-semibold">
                   {error}
@@ -299,7 +371,7 @@ function PaymentModal({
                 </button>
                 <button onClick={handlePay}
                   className="flex-1 rounded-2xl bg-indigo-600 py-3 text-sm font-black text-white hover:bg-indigo-700 transition flex items-center justify-center gap-2">
-                  <CheckCircle2 size={16} /> Konfirmasi & Aktifkan
+                  <Send size={16} /> Kirim Permintaan
                 </button>
               </div>
             </>
@@ -316,11 +388,13 @@ function PlanCard({
   isCurrent,
   onSelect,
   disabled,
+  hasPending,
 }: {
   plan: Plan;
   isCurrent: boolean;
   onSelect: (plan: Plan) => void;
   disabled: boolean;
+  hasPending: boolean;
 }) {
   const meta = planMeta[plan.id] ?? { gradient: "from-slate-50 to-slate-100", icon: CreditCard, accent: "bg-slate-900 text-white" };
   const Icon = meta.icon;
@@ -423,6 +497,10 @@ function PlanCard({
           <div className="flex items-center justify-center gap-2 rounded-2xl bg-emerald-100 border border-emerald-200 py-3 text-sm font-black text-emerald-700">
             <CheckCircle2 size={16} /> Plan Aktif
           </div>
+        ) : hasPending ? (
+          <div className="flex items-center justify-center gap-2 rounded-2xl bg-amber-100 border border-amber-200 py-3 text-sm font-black text-amber-700">
+            <Clock size={16} /> Menunggu Persetujuan
+          </div>
         ) : (
           <button
             onClick={() => onSelect(plan)}
@@ -451,6 +529,7 @@ export default function SubscriptionPage() {
     subscription: Subscription | null;
     plans: Plan[];
     recentActivity: any[];
+    pendingRequest: PendingRequest | null;
   } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -473,15 +552,16 @@ export default function SubscriptionPage() {
 
   useEffect(() => { load(); }, [load]);
 
-  const handleUpgrade = async (planId: string, method: string) => {
+  const handleUpgrade = async (planId: string, method: string, proofNote: string): Promise<{ requiresApproval: boolean }> => {
     const res = await fetch("/api/subscription/upgrade", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ planId, paymentMethod: method }),
+      body: JSON.stringify({ planId, paymentMethod: method, paymentProofNote: proofNote }),
     });
     const json = await res.json();
-    if (!res.ok) throw new Error(json.error || "Gagal memproses pembayaran.");
+    if (!res.ok) throw new Error(json.error || "Gagal memproses permintaan.");
     await load(); // Refresh data
+    return { requiresApproval: json.requiresApproval ?? false };
   };
 
   const isOwner = role === "owner";
@@ -489,6 +569,8 @@ export default function SubscriptionPage() {
   const allPlans = data?.plans ?? [];
   const filteredPlans = allPlans.filter(p => p.billingInterval === tab);
   const currentPlanId = sub?.planId ?? "free";
+  const pendingRequest = data?.pendingRequest;
+  const isPendingApproval = sub?.status === "pending_approval";
 
   return (
     <AppShell allowedRoles={["owner", "admin"]}>
@@ -504,7 +586,7 @@ export default function SubscriptionPage() {
               Kelola Langganan Toko Anda
             </h1>
             <p className="text-slate-300 text-base max-w-xl">
-              Pilih paket yang sesuai kebutuhan bisnis Anda. Upgrade kapanpun, tanpa komitmen jangka panjang.
+              Pilih paket yang sesuai kebutuhan bisnis Anda. Upgrade kapanpun, menunggu konfirmasi admin.
             </p>
 
             {/* Current sub summary */}
@@ -512,7 +594,7 @@ export default function SubscriptionPage() {
               <div className="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {[
                   { label: "Plan Aktif", value: sub.planId || "Free", icon: ShieldCheck },
-                  { label: "Status", value: sub.status, icon: CheckCircle2 },
+                  { label: "Status", value: sub.status === "pending_approval" ? "Menunggu" : sub.status, icon: sub.status === "pending_approval" ? Clock : CheckCircle2 },
                   { label: "Member", value: sub.memberCount, icon: Users },
                   { label: "Tx Bulan Ini", value: sub.txThisMonth, icon: Receipt },
                 ].map(({ label, value, icon: Icon }) => (
@@ -551,6 +633,40 @@ export default function SubscriptionPage() {
 
           {!loading && data && (
             <>
+              {/* Pending Approval Banner */}
+              {(isPendingApproval || pendingRequest) && (
+                <section className="rounded-3xl border-2 border-amber-300 bg-gradient-to-br from-amber-50 to-orange-50 p-6 shadow-sm">
+                  <div className="flex items-start gap-4">
+                    <div className="size-12 rounded-2xl bg-amber-100 flex items-center justify-center flex-shrink-0">
+                      <Hourglass size={24} className="text-amber-600" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-black text-amber-900 text-lg mb-1">Permintaan Upgrade Sedang Ditinjau</h3>
+                      <p className="text-sm text-amber-800">
+                        Permintaan upgrade ke <strong>{pendingRequest?.requestedPlanName ?? "plan baru"}</strong> sedang menunggu konfirmasi admin.
+                        Plan akan diaktifkan setelah pembayaran diverifikasi.
+                      </p>
+                      {pendingRequest && (
+                        <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 gap-2">
+                          <div className="rounded-xl bg-white/70 px-3 py-2">
+                            <p className="text-[9px] font-bold uppercase tracking-widest text-amber-500">Plan Diminta</p>
+                            <p className="text-sm font-black text-amber-900">{pendingRequest.requestedPlanName}</p>
+                          </div>
+                          <div className="rounded-xl bg-white/70 px-3 py-2">
+                            <p className="text-[9px] font-bold uppercase tracking-widest text-amber-500">Jumlah</p>
+                            <p className="text-sm font-black text-amber-900">{formatCurrency(pendingRequest.amountIdr)}</p>
+                          </div>
+                          <div className="rounded-xl bg-white/70 px-3 py-2">
+                            <p className="text-[9px] font-bold uppercase tracking-widest text-amber-500">Tanggal</p>
+                            <p className="text-sm font-bold text-amber-900">{formatDateTime(pendingRequest.createdAt)}</p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </section>
+              )}
+
               {/* Current Plan Details */}
               {sub && (
                 <section className="rounded-3xl border border-slate-200 bg-white shadow-sm overflow-hidden">
@@ -560,7 +676,7 @@ export default function SubscriptionPage() {
                       <h2 className="font-black text-slate-900">Subscription Saat Ini</h2>
                     </div>
                     <span className={clsx("rounded-full px-3 py-1 text-xs font-black uppercase tracking-widest", statusColors[sub.status] ?? "bg-slate-100 text-slate-500")}>
-                      {sub.status}
+                      {sub.status === "pending_approval" ? "Menunggu Persetujuan" : sub.status}
                     </span>
                   </div>
                   <div className="px-6 py-5 grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -623,7 +739,7 @@ export default function SubscriptionPage() {
                 <div className="flex items-center justify-between mb-6">
                   <div>
                     <h2 className="text-2xl font-black text-slate-900">Pilih Paket</h2>
-                    <p className="text-sm text-slate-500 mt-0.5">Upgrade atau downgrade kapanpun sesuai kebutuhan</p>
+                    <p className="text-sm text-slate-500 mt-0.5">Upgrade kapanpun, akan diaktifkan setelah dikonfirmasi admin</p>
                   </div>
                   {/* Billing toggle */}
                   <div className="flex items-center gap-1 rounded-2xl bg-slate-100 p-1">
@@ -653,7 +769,8 @@ export default function SubscriptionPage() {
                       plan={plan}
                       isCurrent={plan.id === currentPlanId}
                       onSelect={setSelectedPlan}
-                      disabled={!isOwner}
+                      disabled={!isOwner || isPendingApproval}
+                      hasPending={isPendingApproval && pendingRequest?.requestedPlanId === plan.id}
                     />
                   ))}
                 </div>
@@ -697,15 +814,15 @@ export default function SubscriptionPage() {
                   {[
                     {
                       q: "Bagaimana cara upgrade plan?",
-                      a: "Pilih plan yang diinginkan, klik tombol 'Pilih Plan', pilih metode pembayaran, dan konfirmasi. Plan akan aktif segera setelah pembayaran dikonfirmasi.",
+                      a: "Pilih plan yang diinginkan, klik tombol 'Pilih Plan', pilih metode pembayaran, dan kirim permintaan. Plan akan aktif setelah admin mengkonfirmasi pembayaran.",
+                    },
+                    {
+                      q: "Berapa lama proses verifikasi?",
+                      a: "Proses verifikasi biasanya memakan waktu 1x24 jam kerja. Anda bisa memantau status permintaan di halaman ini.",
                     },
                     {
                       q: "Apakah data saya aman saat downgrade?",
                       a: "Ya, semua data Anda tetap aman. Data yang melebihi batas plan baru tidak akan terhapus, namun tidak dapat ditambah sampai Anda upgrade kembali.",
-                    },
-                    {
-                      q: "Apakah ada refund jika batal di tengah periode?",
-                      a: "Saat ini kami belum menyediakan refund prorata. Subscription tetap aktif hingga akhir periode yang sudah dibayar.",
                     },
                     {
                       q: "Siapa yang bisa mengubah subscription?",
