@@ -34,6 +34,7 @@ type AuthContextValue = {
   logout: () => Promise<void>;
   switchTenant: (tenantId: string) => Promise<void>;
   refreshMemberships: () => Promise<void>;
+  refreshSession: () => Promise<boolean>;
   setBranchActive: (branchId: string) => void;
   isSuperAdmin: boolean;
   isAuthLoaded: boolean;
@@ -123,6 +124,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
     await fetchSession();
   };
 
+  const refreshSession = async (): Promise<boolean> => {
+    try {
+      const res = await fetch("/api/auth/refresh", { method: "POST" });
+      if (!res.ok) return false;
+      await fetchSession();
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
   const value = useMemo<AuthContextValue>(
     () => ({
       user,
@@ -140,6 +152,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       logout,
       switchTenant,
       refreshMemberships: fetchSession,
+      refreshSession,
       setBranchActive,
       isSuperAdmin,
       isAuthLoaded: !loading,

@@ -1,6 +1,6 @@
 import type { AdminStats, AdminTenant, AdminUser, AdminPlan } from "@/types/pos";
 
-class AdminApiError extends Error {
+export class AdminApiError extends Error {
   constructor(message: string) {
     super(message);
     this.name = "AdminApiError";
@@ -31,6 +31,11 @@ export const getAdminStats = () => fetchApi<AdminStats>("/api/admin/stats");
 // Tenants
 export const getAdminTenants = () => fetchApi<AdminTenant[]>("/api/admin/tenants");
 
+export const getAdminTenantDetail = (id: string) =>
+  fetchApi<{ tenant: AdminTenantDetail; members: AdminMember[]; branches: AdminBranch[]; recentTransactions: AdminTransaction[] }>(
+    `/api/admin/tenants/${id}`
+  );
+
 export const createAdminTenant = (payload: { name: string; ownerUid: string; plan?: string }) =>
   fetchApi<{ tenantId: string }>("/api/admin/tenants", {
     method: "POST",
@@ -50,6 +55,9 @@ export const deleteAdminTenant = (id: string) =>
 
 // Users
 export const getAdminUsers = () => fetchApi<AdminUser[]>("/api/admin/users");
+
+export const getAdminUserDetail = (id: string) =>
+  fetchApi<{ user: AdminUserDetail; memberships: AdminUserMembership[] }>(`/api/admin/users/${id}`);
 
 export const createAdminUser = (payload: any) =>
   fetchApi<{ userId: string }>("/api/admin/users", {
@@ -87,3 +95,87 @@ export const deleteAdminPlan = (id: string) =>
   fetchApi<{ success: boolean }>(`/api/admin/plans/${id}`, {
     method: "DELETE",
   });
+
+// Extended types for detail views
+export type AdminUserDetail = {
+  id: string;
+  email: string;
+  name: string;
+  isSuperadmin: boolean;
+  defaultTenantId: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type AdminUserMembership = {
+  memberId: string;
+  role: string;
+  memberStatus: string;
+  joinedAt: string;
+  tenantId: string;
+  tenantName: string;
+  slug: string;
+  tenantStatus: string;
+  plan: string;
+  subStatus: string;
+  planId: string;
+  trialEndsAt: string | null;
+  periodStart: string | null;
+  periodEnd: string | null;
+  lastPaymentAt: string | null;
+  memberCount: number;
+  productCount: number;
+  totalRevenue: number;
+};
+
+export type AdminTenantDetail = {
+  id: string;
+  name: string;
+  slug: string;
+  ownerUid: string;
+  ownerName: string;
+  ownerEmail: string;
+  status: string;
+  plan: string;
+  branchCount: number;
+  settings: any;
+  createdAt: string;
+  subStatus: string;
+  planId: string;
+  trialEndsAt: string | null;
+  periodStart: string | null;
+  periodEnd: string | null;
+  lastPaymentAt: string | null;
+  memberCount: number;
+  productCount: number;
+  totalRevenue: number;
+  totalTransactions: number;
+};
+
+export type AdminMember = {
+  id: string;
+  role: string;
+  status: string;
+  joinedAt: string;
+  userId: string;
+  name: string;
+  email: string;
+};
+
+export type AdminBranch = {
+  id: string;
+  name: string;
+  address: string | null;
+  phone: string | null;
+  isActive: boolean;
+  createdAt: string;
+};
+
+export type AdminTransaction = {
+  id: string;
+  invoiceCode: string;
+  totalPrice: number;
+  paymentMethod: string;
+  status: string;
+  createdAt: string;
+};

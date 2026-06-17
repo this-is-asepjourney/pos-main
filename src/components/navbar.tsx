@@ -7,6 +7,7 @@ import {
   Boxes,
   Building2,
   Clock3,
+  CreditCard,
   LogOut,
   ReceiptText,
   ShoppingCart,
@@ -26,7 +27,9 @@ const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: BarChart3, roles: MANAGER_ROLES },
   { href: "/products", label: "Produk", icon: Boxes, roles: MANAGER_ROLES },
   { href: "/transactions", label: "Transaksi", icon: ReceiptText, roles: MANAGER_ROLES },
+  { href: "/subscription", label: "Subscription", icon: CreditCard, roles: MANAGER_ROLES },
 ];
+
 
 export function Navbar() {
   const pathname = usePathname();

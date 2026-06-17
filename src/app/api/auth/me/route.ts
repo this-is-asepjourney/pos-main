@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import pool from "@/lib/db";
-import { getSession } from "@/lib/auth";
+import { getSession, signToken, sessionCookieOptions } from "@/lib/auth";
 import type { RowDataPacket } from "mysql2";
 
 export async function GET() {
@@ -10,7 +10,7 @@ export async function GET() {
       return NextResponse.json({ user: null }, { status: 401 });
     }
 
-    // Ambil data terbaru user + memberships
+    // Always read fresh data from DB (picks up is_superadmin, name, email changes)
     const [users] = await pool.query<RowDataPacket[]>(
       "SELECT id, email, name, default_tenant_id, is_superadmin FROM users WHERE id = ? LIMIT 1",
       [session.uid],
@@ -42,11 +42,28 @@ export async function GET() {
     }));
 
     // Tenant aktif
-    const activeMembership = memberships.find(
-      (m) => m.tenantId === (session.tenantId ?? user.default_tenant_id),
-    ) ?? memberships[0] ?? null;
+    const activeMembership =
+      memberships.find(
+        (m) => m.tenantId === (session.tenantId ?? user.default_tenant_id),
+      ) ??
+      memberships[0] ??
+      null;
 
-    return NextResponse.json({
+    const freshIsSuperAdmin = Boolean(user.is_superadmin);
+
+    // Re-mint the JWT so the cookie is always in sync with DB
+    // This ensures API routes that check the cookie get the latest is_superadmin, etc.
+    const newToken = await signToken({
+      uid: user.id,
+      email: user.email,
+      name: user.name,
+      tenantId: activeMembership?.tenantId ?? null,
+      role: activeMembership?.role ?? "cashier",
+      branchIds: activeMembership?.branchIds ?? [],
+      isSuperAdmin: freshIsSuperAdmin,
+    });
+
+    const response = NextResponse.json({
       user: {
         uid: user.id,
         email: user.email,
@@ -56,9 +73,14 @@ export async function GET() {
         branchIds: activeMembership?.branchIds ?? [],
         memberships,
         needsOnboarding: memberships.length === 0,
-        isSuperAdmin: Boolean(user.is_superadmin),
+        isSuperAdmin: freshIsSuperAdmin,
       },
     });
+
+    // Refresh the cookie with the new token
+    response.cookies.set(sessionCookieOptions(newToken));
+
+    return response;
   } catch (error) {
     console.error("Session check error:", error);
     return NextResponse.json({ user: null }, { status: 500 });
