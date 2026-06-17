@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { LockKeyhole, Mail } from "lucide-react";
+import { LockKeyhole, Mail, CreditCard, Sparkles } from "lucide-react";
 import { BrandMark } from "@/components/brand-mark";
 import { useAuth } from "@/components/app-provider";
 
@@ -120,6 +120,27 @@ export default function LoginPage() {
               </button>
             </div>
           </form>
+
+          {/* Promotional Banner for Subscription Plans */}
+          <div className="mt-8 rounded-3xl border border-indigo-100 bg-gradient-to-br from-indigo-50 via-white to-purple-50 p-6 text-center shadow-inner">
+            <div className="mx-auto mb-3 flex size-12 items-center justify-center rounded-2xl bg-indigo-100 text-indigo-600 shadow-sm">
+              <Sparkles size={24} />
+            </div>
+            <h3 className="text-base font-black tracking-tight text-slate-900">
+              Tertarik menggunakan Bro-POS?
+            </h3>
+            <p className="mt-2 text-sm text-slate-500">
+              Lihat berbagai pilihan paket berlangganan yang dirancang khusus untuk skala bisnis Anda.
+            </p>
+            <button
+              type="button"
+              onClick={() => router.push("/pricing")}
+              className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-5 py-3.5 text-sm font-black text-white shadow-lg shadow-indigo-600/25 transition hover:-translate-y-0.5 hover:bg-indigo-700 hover:shadow-xl hover:shadow-indigo-600/30"
+            >
+              <CreditCard size={18} />
+              Lihat Harga & Paket
+            </button>
+          </div>
         </div>
       </section>
     </main>
