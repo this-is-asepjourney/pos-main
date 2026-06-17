@@ -48,7 +48,7 @@ export default function LoginPage() {
           </p>
         </div>
         <div className="relative grid grid-cols-3 gap-4">
-          {["MySQL", "Multi kasir", "Next.js"].map((item) => (
+          {["Bro-POS", "Multi kasir", "Untuk Siap Membantu Anda"].map((item) => (
             <div key={item} className="rounded-3xl bg-white/15 p-5 backdrop-blur">
               <p className="text-sm font-bold">{item}</p>
               <p className="mt-2 text-xs text-cyan-50">Ready to scale</p>
