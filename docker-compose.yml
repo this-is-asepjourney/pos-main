@@ -8,10 +8,10 @@ services:
       dockerfile: Dockerfile
     image: professional-pos-cashier:latest
     ports:
-      - "4000:3000"
+      - "4000:4000"
     environment:
       - NODE_ENV=production
-      - PORT=3000
+      - PORT=4000
       # -- Database Settings --
       # In Dokploy, you will set these in the "Environment" tab of your application
       - MYSQL_HOST=${MYSQL_HOST}
@@ -23,7 +23,7 @@ services:
       - JWT_SECRET=${JWT_SECRET}
     restart: unless-stopped
     healthcheck:
-      test: [ "CMD", "wget", "-q", "-O", "-", "http://localhost:3000/api/auth/me" ]
+      test: [ "CMD", "wget", "-q", "-O", "-", "http://localhost:4000/api/auth/me" ]
       interval: 30s
       timeout: 10s
       retries: 3
