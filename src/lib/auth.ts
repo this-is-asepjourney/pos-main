@@ -55,7 +55,7 @@ export function sessionCookieOptions(token: string) {
     name: COOKIE_NAME,
     value: token,
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: process.env.NODE_ENV === "production" && process.env.SECURE_COOKIE !== "false",
     sameSite: "lax" as const,
     path: "/",
     maxAge: 60 * 60 * 24 * 7, // 7 days
@@ -67,7 +67,7 @@ export function clearSessionCookie() {
     name: COOKIE_NAME,
     value: "",
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: process.env.NODE_ENV === "production" && process.env.SECURE_COOKIE !== "false",
     sameSite: "lax" as const,
     path: "/",
     maxAge: 0,
