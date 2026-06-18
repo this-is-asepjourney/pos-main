@@ -5,12 +5,13 @@ import { AppShell } from "@/components/app-shell";
 import { formatCurrency, formatDateTime } from "@/lib/format";
 import { getTransactions } from "@/services/transaction-service";
 import type { PosTransaction } from "@/types/pos";
-import { Receipt } from "lucide-react";
+import { Receipt, Download, AlertTriangle } from "lucide-react";
 import { clsx } from "clsx";
 
 export default function TransactionsPage() {
   const [transactions, setTransactions] = useState<PosTransaction[]>([]);
   const [loading, setLoading] = useState(true);
+  const [exportError, setExportError] = useState("");
 
   const fetchTransactions = async () => {
     try {
@@ -30,10 +31,35 @@ export default function TransactionsPage() {
     return () => clearInterval(interval);
   }, []);
 
+  const handleExport = async () => {
+    setExportError("");
+    try {
+      const res = await fetch("/api/transactions/export");
+      if (!res.ok) {
+        const errorData = await res.json();
+        setExportError(errorData.error || "Gagal mengunduh Excel.");
+        return;
+      }
+      // Trigger file download
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Transaksi_${new Date().toISOString().split("T")[0]}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error(e);
+      setExportError("Gagal terhubung ke server.");
+    }
+  };
+
   return (
     <AppShell allowedRoles={["owner", "admin"]}>
       <div className="p-4 lg:p-8">
-        <header className="mb-8 flex items-center justify-between">
+        <header className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-3xl font-black tracking-tight text-slate-950">
               Riwayat Transaksi
@@ -42,13 +68,34 @@ export default function TransactionsPage() {
               Daftar transaksi dari semua kasir
             </p>
           </div>
-          <button
-            onClick={fetchTransactions}
-            className="rounded-xl bg-slate-100 px-4 py-2 text-sm font-bold text-slate-600 hover:bg-slate-200"
-          >
-            Refresh Data
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleExport}
+              className="flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-bold text-white hover:bg-indigo-700 transition shadow-sm"
+            >
+              <Download size={16} /> Export Excel
+            </button>
+            <button
+              onClick={fetchTransactions}
+              className="rounded-xl bg-slate-100 px-4 py-2 text-sm font-bold text-slate-600 hover:bg-slate-200 transition"
+            >
+              Refresh Data
+            </button>
+          </div>
         </header>
+
+        {exportError && (
+          <div className="mb-6 flex items-center gap-3 rounded-2xl bg-amber-50 border border-amber-200 p-4">
+            <AlertTriangle className="text-amber-500" size={20} />
+            <div>
+              <p className="font-bold text-amber-800">Akses Ditolak</p>
+              <p className="text-sm text-amber-700">{exportError}</p>
+            </div>
+            <a href="/subscription" className="ml-auto flex-shrink-0 rounded-xl bg-amber-500 px-4 py-2 text-xs font-black uppercase text-white hover:bg-amber-600 transition">
+              Upgrade Plan
+            </a>
+          </div>
+        )}
 
         <div className="rounded-3xl border border-slate-200 bg-white shadow-sm">
           <div className="overflow-x-auto">

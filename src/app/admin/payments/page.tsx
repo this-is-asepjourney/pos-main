@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import {
   AlertTriangle,
@@ -404,12 +405,20 @@ export default function AdminPaymentsPage() {
               Monitor dan kelola permintaan upgrade subscription dari semua tenant.
             </p>
           </div>
-          <button
-            onClick={() => { setLoading(true); load(); }}
-            className="hidden sm:flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-50 transition"
-          >
-            <RefreshCw size={14} /> Refresh
-          </button>
+          <div className="flex items-center gap-3">
+            <Link
+              href="/admin/payment-methods"
+              className="hidden sm:flex items-center gap-2 rounded-2xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white hover:bg-slate-800 transition shadow-sm"
+            >
+              <CreditCard size={14} /> Atur Metode Pembayaran
+            </Link>
+            <button
+              onClick={() => { setLoading(true); load(); }}
+              className="hidden sm:flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-50 transition"
+            >
+              <RefreshCw size={14} /> Refresh
+            </button>
+          </div>
         </div>
 
         {/* Stats */}

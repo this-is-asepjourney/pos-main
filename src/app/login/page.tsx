@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { LockKeyhole, Mail, CreditCard, Sparkles } from "lucide-react";
+import { LockKeyhole, Mail, CreditCard, Sparkles, AlertCircle } from "lucide-react";
 import { BrandMark } from "@/components/brand-mark";
 import { useAuth } from "@/components/app-provider";
 
@@ -97,11 +97,7 @@ export default function LoginPage() {
               </div>
             </label>
 
-            {error ? (
-              <div className="rounded-2xl bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">
-                {error}
-              </div>
-            ) : null}
+
 
             <button
               type="submit"
@@ -143,6 +139,30 @@ export default function LoginPage() {
           </div>
         </div>
       </section>
+
+      {/* Error Popup Modal */}
+      {error && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="w-full max-w-sm rounded-[2rem] bg-white p-6 shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="flex flex-col items-center text-center">
+              <div className="flex size-16 items-center justify-center rounded-full bg-rose-100 text-rose-600 mb-4 shadow-sm">
+                <AlertCircle size={32} strokeWidth={2.5} />
+              </div>
+              <h3 className="text-xl font-black text-slate-900 mb-2">Login Gagal</h3>
+              <p className="text-sm text-slate-500 mb-6">
+                {error}
+              </p>
+              <button
+                type="button"
+                onClick={() => setError("")}
+                className="w-full rounded-2xl bg-slate-950 px-5 py-3.5 font-black text-white transition hover:bg-slate-800"
+              >
+                Coba Lagi
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

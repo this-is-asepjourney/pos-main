@@ -97,8 +97,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
       body: JSON.stringify({ email, password }),
     });
     if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.error || "Login gagal.");
+      let errorMessage = "Login gagal. Silakan periksa kembali email dan password Anda.";
+      try {
+        const contentType = res.headers.get("content-type");
+        if (contentType && contentType.includes("application/json")) {
+          const err = await res.json();
+          errorMessage = err.error || errorMessage;
+        } else {
+          // Consume text to prevent hanging
+          await res.text();
+        }
+      } catch (e) {
+        console.error("Error parsing response:", e);
+      }
+      throw new Error(errorMessage);
     }
     await fetchSession();
   };

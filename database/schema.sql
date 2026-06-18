@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS tenants (
   slug VARCHAR(100) NOT NULL,
   owner_uid VARCHAR(64) NOT NULL,
   status ENUM('trial','active','suspended') DEFAULT 'trial',
-  plan ENUM('free','pro','business') DEFAULT 'free',
+  plan VARCHAR(50) DEFAULT 'free',
   branch_count INT DEFAULT 1,
   settings JSON,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

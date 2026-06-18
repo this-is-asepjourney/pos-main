@@ -96,6 +96,15 @@ export async function POST(request: Request) {
       ],
     );
 
+    const { logActivity } = await import("@/lib/activity");
+    await logActivity({
+      tenantId: session.tenantId,
+      userId: session.uid,
+      userName: session.name,
+      action: "ADD_PRODUCT",
+      description: `Menambahkan produk baru: ${body.name}`,
+    });
+
     return NextResponse.json({ id }, { status: 201 });
   } catch (error) {
     console.error("Create product error:", error);

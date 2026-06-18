@@ -13,6 +13,8 @@ import {
   UsersRound,
   ChevronRight,
   Wallet,
+  Bell,
+  MessageSquareWarning,
 } from "lucide-react";
 import { useAuth } from "@/components/app-provider";
 import { BrandMark } from "@/components/brand-mark";
@@ -24,6 +26,8 @@ const navItems = [
   { href: "/admin/users", label: "Users", icon: UsersRound, exact: false },
   { href: "/admin/plans", label: "Plans", icon: CreditCard, exact: false },
   { href: "/admin/payments", label: "Pembayaran", icon: Wallet, exact: false },
+  { href: "/admin/notifications", label: "Notifikasi", icon: Bell, exact: false },
+  { href: "/admin/feedbacks", label: "Feedbacks", icon: MessageSquareWarning, exact: false },
 ];
 
 export function AdminShell({ children }: { children: ReactNode }) {

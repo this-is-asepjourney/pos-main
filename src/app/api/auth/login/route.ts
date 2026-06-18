@@ -33,10 +33,27 @@ export async function POST(request: Request) {
 
     const valid = await bcrypt.compare(password, user.password_hash);
     if (!valid) {
+      await pool.query("UPDATE users SET failed_login_count = failed_login_count + 1 WHERE id = ?", [user.id]);
+      
+      const newFailCount = user.failed_login_count + 1;
+      if (newFailCount >= 5 && user.default_tenant_id) {
+        // Send notification & reset
+        await pool.query("UPDATE users SET failed_login_count = 0 WHERE id = ?", [user.id]);
+        await pool.query(
+          "INSERT INTO admin_notifications (id, target_tenant_id, type, title, message) VALUES (UUID(), ?, 'warning', 'Peringatan Keamanan', 'Terdapat 5 kali percobaan gagal saat login ke akun Anda. Mohon pastikan akun Anda aman.')",
+          [user.default_tenant_id]
+        );
+      }
+      
       return NextResponse.json(
         { error: "Email atau password salah." },
         { status: 401 },
       );
+    }
+
+    // Reset login failures on success
+    if (user.failed_login_count > 0) {
+      await pool.query("UPDATE users SET failed_login_count = 0 WHERE id = ?", [user.id]);
     }
 
     // Cari membership aktif

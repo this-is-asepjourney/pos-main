@@ -10,6 +10,10 @@ const mysql = require('mysql2/promise');
   });
 
   try {
+    // 0. Alter tenants table plan column to support new plan types
+    await conn.execute(`ALTER TABLE tenants MODIFY COLUMN plan VARCHAR(50) DEFAULT 'free'`);
+    console.log('✅ Altered tenants.plan to VARCHAR(50)');
+
     // 1. Create plans table
     await conn.execute(`
       CREATE TABLE IF NOT EXISTS plans (

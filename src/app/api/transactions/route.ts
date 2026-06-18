@@ -204,6 +204,16 @@ export async function POST(request: Request) {
       conn.release();
     }
 
+    const { logActivity } = await import("@/lib/activity");
+    await logActivity({
+      tenantId: session.tenantId,
+      userId: body.userId || session.uid,
+      userName: body.userName || session.name,
+      action: "CREATE_TRANSACTION",
+      description: `Membuat transaksi dengan invoice: ${invoiceCode} senilai Rp${body.totalPrice.toLocaleString()}`,
+      metadata: { invoiceCode, total: body.totalPrice, items: body.cart.length }
+    });
+
     return NextResponse.json({ invoiceCode }, { status: 201 });
   } catch (error) {
     console.error("Checkout error:", error);

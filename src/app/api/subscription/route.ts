@@ -65,6 +65,14 @@ export async function GET() {
       [session.tenantId]
     );
 
+    // Available Payment Methods
+    const [paymentMethods] = await pool.query<RowDataPacket[]>(
+      `SELECT id, name, type, account_number as accountNumber, account_name as accountName, qr_image_url as qrImageUrl
+       FROM admin_payment_methods
+       WHERE is_active = 1
+       ORDER BY type ASC, created_at ASC`
+    );
+
     return NextResponse.json({
       subscription: subs[0] ?? null,
       plans: plans.map(p => ({
@@ -77,6 +85,7 @@ export async function GET() {
       })),
       recentActivity: payments,
       pendingRequest: pendingReqs[0] ?? null,
+      paymentMethods: paymentMethods,
     });
   } catch (error) {
     console.error("Subscription GET error:", error);

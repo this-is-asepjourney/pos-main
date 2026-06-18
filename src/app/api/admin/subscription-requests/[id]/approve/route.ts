@@ -91,6 +91,12 @@ export async function POST(
         [basePlan, req.tenant_id]
       );
 
+      // 4. Send Notification
+      await conn.query(
+        "INSERT INTO admin_notifications (id, target_tenant_id, type, title, message) VALUES (UUID(), ?, 'info', 'Langganan Diperbarui', ?)",
+        [req.tenant_id, `Selamat! Permintaan berlangganan Anda telah disetujui. Plan ${req.requested_plan_name} sekarang aktif.`]
+      );
+
       await conn.commit();
     } catch (err) {
       await conn.rollback();

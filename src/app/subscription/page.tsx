@@ -73,6 +73,15 @@ type PendingRequest = {
   createdAt: string;
 };
 
+type PaymentMethodItem = {
+  id: number;
+  name: string;
+  type: string;
+  accountNumber: string | null;
+  accountName: string | null;
+  qrImageUrl: string | null;
+};
+
 // ─── Plan visual config ───────────────────────────────────────────────────────
 const planMeta: Record<string, {
   gradient: string; icon: React.ElementType; accent: string; badgeText?: string; recommended?: boolean
@@ -111,15 +120,17 @@ const methodLabels: Record<string, string> = {
 function PaymentModal({
   plan,
   currentPlanId,
+  availableMethods,
   onConfirm,
   onClose,
 }: {
   plan: Plan;
   currentPlanId: string;
+  availableMethods: PaymentMethodItem[];
   onConfirm: (planId: string, method: string, proofNote: string) => Promise<{ requiresApproval: boolean }>;
   onClose: () => void;
 }) {
-  const [method, setMethod] = useState<"transfer" | "qris" | "manual">("transfer");
+  const [methodId, setMethodId] = useState<number>(availableMethods.length > 0 ? availableMethods[0].id : 0);
   const [proofNote, setProofNote] = useState("");
   const [step, setStep] = useState<"choose" | "confirm" | "processing" | "done" | "pending">("choose");
   const [error, setError] = useState("");
@@ -129,7 +140,9 @@ function PaymentModal({
     setStep("processing");
     setError("");
     try {
-      const result = await onConfirm(plan.id, isFree ? "free" : method, proofNote);
+      const selectedMethod = availableMethods.find(m => m.id === methodId);
+      const methodLabel = selectedMethod ? selectedMethod.name : "manual";
+      const result = await onConfirm(plan.id, isFree ? "free" : methodLabel, proofNote);
       if (result.requiresApproval) {
         setStep("pending");
       } else {
@@ -141,29 +154,11 @@ function PaymentModal({
     }
   };
 
-  const methods = [
-    {
-      id: "transfer",
-      label: "Transfer Bank",
-      desc: "BCA / Mandiri / BNI / BRI",
-      icon: "🏦",
-      detail: "Setelah transfer, kirim bukti ke admin untuk konfirmasi.",
-    },
-    {
-      id: "qris",
-      label: "QRIS",
-      desc: "Bayar lewat GoPay, OVO, Dana, dll.",
-      icon: "📱",
-      detail: "Scan QR code dan selesaikan pembayaran di aplikasi dompet digital.",
-    },
-    {
-      id: "manual",
-      label: "Konfirmasi Manual",
-      desc: "Hubungi admin untuk proses pembayaran",
-      icon: "📞",
-      detail: "Tim kami akan menghubungi Anda untuk proses pembayaran dan aktivasi.",
-    },
-  ] as const;
+  const getMethodIcon = (type: string) => {
+    if (type === "bank_transfer") return "🏦";
+    if (type === "qris") return "📱";
+    return "💳";
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -259,30 +254,52 @@ function PaymentModal({
 
               <p className="text-xs font-black uppercase tracking-widest text-slate-400 mb-3">Metode Pembayaran</p>
               <div className="space-y-2 mb-5">
-                {methods.map((m) => (
-                  <button key={m.id} type="button" onClick={() => setMethod(m.id)}
+                {availableMethods.length === 0 && (
+                  <p className="text-sm text-slate-500">Tidak ada metode pembayaran yang tersedia.</p>
+                )}
+                {availableMethods.map((m) => (
+                  <button key={m.id} type="button" onClick={() => setMethodId(m.id)}
                     className={clsx(
                       "w-full flex items-center gap-3 rounded-2xl border-2 px-4 py-3 text-left transition",
-                      method === m.id ? "border-indigo-500 bg-indigo-50" : "border-slate-200 bg-white hover:border-slate-300"
+                      methodId === m.id ? "border-indigo-500 bg-indigo-50" : "border-slate-200 bg-white hover:border-slate-300"
                     )}>
-                    <span className="text-2xl">{m.icon}</span>
+                    <span className="text-2xl">{getMethodIcon(m.type)}</span>
                     <div className="flex-1">
-                      <p className="font-bold text-slate-900 text-sm">{m.label}</p>
-                      <p className="text-xs text-slate-500">{m.desc}</p>
+                      <p className="font-bold text-slate-900 text-sm">{m.name}</p>
+                      <p className="text-xs text-slate-500">
+                        {m.type === "bank_transfer" ? "Transfer Bank" : "QRIS"}
+                      </p>
                     </div>
                     <div className={clsx("size-4 rounded-full border-2 flex items-center justify-center flex-shrink-0",
-                      method === m.id ? "border-indigo-500 bg-indigo-500" : "border-slate-300")}>
-                      {method === m.id && <div className="size-2 rounded-full bg-white" />}
+                      methodId === m.id ? "border-indigo-500 bg-indigo-500" : "border-slate-300")}>
+                      {methodId === m.id && <div className="size-2 rounded-full bg-white" />}
                     </div>
                   </button>
                 ))}
               </div>
 
               {/* Detail of selected method */}
-              <div className="rounded-2xl bg-blue-50 border border-blue-100 px-4 py-3 mb-5 flex gap-2">
-                <AlertTriangle size={14} className="text-blue-500 flex-shrink-0 mt-0.5" />
-                <p className="text-xs text-blue-700 font-medium">{methods.find(m => m.id === method)?.detail}</p>
-              </div>
+              {availableMethods.find(m => m.id === methodId) && (
+                <div className="rounded-2xl bg-blue-50 border border-blue-100 p-4 mb-5 space-y-3">
+                  <div className="flex gap-2 items-start">
+                    <AlertTriangle size={16} className="text-blue-500 flex-shrink-0 mt-0.5" />
+                    <p className="text-xs text-blue-700 font-medium">
+                      Pilih metode pembayaran di atas. Harap transfer / scan sesuai dengan detail berikut:
+                    </p>
+                  </div>
+                  {availableMethods.find(m => m.id === methodId)?.type === "bank_transfer" ? (
+                    <div className="bg-white rounded-xl p-3 border border-blue-100">
+                      <p className="text-xs text-slate-500 font-semibold mb-1">No. Rekening ({availableMethods.find(m => m.id === methodId)?.name})</p>
+                      <p className="font-black text-slate-900 text-lg tracking-widest">{availableMethods.find(m => m.id === methodId)?.accountNumber}</p>
+                      <p className="font-bold text-slate-700 mt-1">A/N: {availableMethods.find(m => m.id === methodId)?.accountName}</p>
+                    </div>
+                  ) : (
+                    <div className="bg-white rounded-xl p-3 border border-blue-100 flex justify-center">
+                      <img src={availableMethods.find(m => m.id === methodId)?.qrImageUrl ?? ""} alt="QRIS" className="w-48 h-48 object-contain rounded-xl" />
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Payment proof note */}
               <div className="mb-5">
@@ -342,7 +359,7 @@ function PaymentModal({
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-500">Metode</span>
-                  <span className="font-bold text-slate-900">{methods.find(m => m.id === method)?.label}</span>
+                  <span className="font-bold text-slate-900">{availableMethods.find(m => m.id === methodId)?.name}</span>
                 </div>
                 <div className="border-t border-slate-200 pt-2 flex justify-between">
                   <span className="font-black text-slate-900">Total</span>
@@ -530,6 +547,7 @@ export default function SubscriptionPage() {
     plans: Plan[];
     recentActivity: any[];
     pendingRequest: PendingRequest | null;
+    paymentMethods: PaymentMethodItem[];
   } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -846,6 +864,7 @@ export default function SubscriptionPage() {
         <PaymentModal
           plan={selectedPlan}
           currentPlanId={currentPlanId}
+          availableMethods={data?.paymentMethods ?? []}
           onConfirm={handleUpgrade}
           onClose={() => setSelectedPlan(null)}
         />
