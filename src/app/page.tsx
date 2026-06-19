@@ -41,7 +41,8 @@ export default function CashierPage() {
       const [prods, cats] = await Promise.all([getProducts(), getCategories()]);
       setProducts(prods);
       setCategories(cats);
-    } catch (error) {
+    } catch (error: any) {
+      if (error?.message === "Failed to fetch" || error?.name === "AbortError") return;
       console.error("Gagal memuat data:", error);
     }
   };

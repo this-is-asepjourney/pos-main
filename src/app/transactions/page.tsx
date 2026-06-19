@@ -17,8 +17,9 @@ export default function TransactionsPage() {
     try {
       const data = await getTransactions(50);
       setTransactions(data);
-    } catch (error) {
-      console.error(error);
+    } catch (error: any) {
+      if (error?.message === "Failed to fetch" || error?.name === "AbortError") return;
+      console.error("Gagal memuat transaksi:", error);
     } finally {
       setLoading(false);
     }

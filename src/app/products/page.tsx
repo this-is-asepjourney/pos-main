@@ -94,7 +94,8 @@ export default function ProductsPage() {
           current.categoryId ? current : { ...current, categoryId: cats[0].id, categoryName: cats[0].name },
         );
       }
-    } catch (error) {
+    } catch (error: any) {
+      if (error?.message === "Failed to fetch" || error?.name === "AbortError") return;
       console.error("Gagal memuat data:", error);
     }
   };
