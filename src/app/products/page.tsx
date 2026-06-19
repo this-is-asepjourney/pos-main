@@ -151,8 +151,27 @@ export default function ProductsPage() {
     setSavingProduct(true);
 
     try {
-      // For now, image upload is URL-based (paste URL)
-      const imageUrl = form.imageUrl;
+      let imageUrl = form.imageUrl;
+      
+      if (selectedImageFile) {
+        const formData = new FormData();
+        formData.append("file", selectedImageFile);
+        formData.append("folder", "products");
+
+        const uploadRes = await fetch("/api/upload", {
+          method: "POST",
+          body: formData,
+        });
+
+        if (!uploadRes.ok) {
+          const errorData = await uploadRes.json();
+          throw new Error(errorData.error || "Gagal mengunggah gambar produk.");
+        }
+
+        const uploadData = await uploadRes.json();
+        imageUrl = uploadData.url;
+      }
+
       const payload: ProductInput = {
         ...form,
         imageUrl,
@@ -474,21 +493,43 @@ export default function ProductsPage() {
                 className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none focus:border-cyan-300"
               />
             </div>
-            <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-3">
-              <input
-                value={form.imageUrl ?? ""}
-                onChange={(event) => setForm((current) => ({ ...current, imageUrl: event.target.value }))}
-                placeholder="URL gambar produk (opsional)"
-                className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-cyan-300"
-              />
-              {form.imageUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
+            <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4">
+              <label className="text-sm font-bold text-slate-700 block mb-2">
+                Gambar Produk (Opsional)
+              </label>
+              <div className="flex items-center gap-3">
+                <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-slate-200 px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-300 transition">
+                  <ImageUp size={16} />
+                  Pilih Gambar
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleSelectImage}
+                    className="hidden"
+                  />
+                </label>
+                {(selectedImagePreview || form.imageUrl) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedImageFile(null);
+                      setSelectedImagePreview("");
+                      setForm((current) => ({ ...current, imageUrl: "" }));
+                    }}
+                    className="rounded-xl px-3 py-2 text-sm font-bold text-rose-600 hover:bg-rose-50"
+                  >
+                    Hapus
+                  </button>
+                )}
+              </div>
+              
+              {(selectedImagePreview || form.imageUrl) && (
                 <img
-                  src={form.imageUrl}
+                  src={selectedImagePreview || form.imageUrl || ""}
                   alt="Preview produk"
-                  className="mt-3 h-32 w-full rounded-xl object-cover"
+                  className="mt-4 h-40 w-full max-w-sm rounded-xl object-cover border border-slate-200 shadow-sm"
                 />
-              ) : null}
+              )}
             </div>
             <div className="flex gap-2">
               <button

@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
 import pool from "@/lib/db";
-import { writeFile, mkdir } from "fs/promises";
-import { join } from "path";
-import { existsSync } from "fs";
+import { uploadFileToGCS } from "@/lib/gcs";
 
 export async function GET() {
   try {
@@ -27,18 +25,8 @@ export async function POST(req: Request) {
 
     let qrImageUrl = "";
     if (file && file.size > 0) {
-      const bytes = await file.arrayBuffer();
-      const buffer = Buffer.from(bytes);
-      const filename = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.]/g, '')}`;
-      const uploadDir = join(process.cwd(), "public", "uploads");
-      
-      if (!existsSync(uploadDir)) {
-        await mkdir(uploadDir, { recursive: true });
-      }
-      
-      const path = join(uploadDir, filename);
-      await writeFile(path, buffer);
-      qrImageUrl = `/uploads/${filename}`;
+      const buffer = Buffer.from(await file.arrayBuffer());
+      qrImageUrl = await uploadFileToGCS(buffer, file.name, file.type, "payments");
     }
 
     const conn = pool;

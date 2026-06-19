@@ -51,18 +51,6 @@ export async function GET() {
 
     const freshIsSuperAdmin = Boolean(user.is_superadmin);
 
-    // Re-mint the JWT so the cookie is always in sync with DB
-    // This ensures API routes that check the cookie get the latest is_superadmin, etc.
-    const newToken = await signToken({
-      uid: user.id,
-      email: user.email,
-      name: user.name,
-      tenantId: activeMembership?.tenantId ?? null,
-      role: activeMembership?.role ?? "cashier",
-      branchIds: activeMembership?.branchIds ?? [],
-      isSuperAdmin: freshIsSuperAdmin,
-    });
-
     const response = NextResponse.json({
       user: {
         uid: user.id,
@@ -76,9 +64,6 @@ export async function GET() {
         isSuperAdmin: freshIsSuperAdmin,
       },
     });
-
-    // Refresh the cookie with the new token
-    response.cookies.set(sessionCookieOptions(newToken));
 
     return response;
   } catch (error) {

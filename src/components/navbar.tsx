@@ -59,6 +59,7 @@ export function Navbar() {
   } = useAuth();
 
   const [notifications, setNotifications] = useState<any[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
   const [showNotifModal, setShowNotifModal] = useState(false);
   
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
@@ -75,7 +76,10 @@ export function Navbar() {
       })
       .then(r => r.json())
       .then(data => {
-        if (data.notifications) setNotifications(data.notifications);
+        if (data.notifications) {
+          setNotifications(data.notifications);
+          setUnreadCount(data.notifications.length);
+        }
       })
       .catch(console.error);
     }
@@ -175,16 +179,19 @@ export function Navbar() {
         
         <div className="mt-4 border-t border-white/10 pt-4 hidden lg:block space-y-2">
           <button
-            onClick={() => setShowNotifModal(true)}
+            onClick={() => {
+              setShowNotifModal(true);
+              setUnreadCount(0);
+            }}
             className="flex w-full items-center justify-between rounded-2xl px-4 py-3 text-sm font-semibold text-slate-300 hover:bg-white/10 hover:text-white transition"
           >
             <div className="flex items-center gap-3">
               <Bell size={18} />
               Notifikasi
             </div>
-            {notifications.length > 0 && (
+            {unreadCount > 0 && (
               <span className="flex size-5 items-center justify-center rounded-full bg-amber-500 text-[10px] font-black text-white">
-                {notifications.length}
+                {unreadCount}
               </span>
             )}
           </button>

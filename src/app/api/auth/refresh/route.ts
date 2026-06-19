@@ -1,60 +1,79 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
+import crypto from "crypto";
 import pool from "@/lib/db";
-import { getSession, signToken, sessionCookieOptions } from "@/lib/auth";
 import type { RowDataPacket } from "mysql2";
+import { 
+  REFRESH_COOKIE_NAME, 
+  signAccessToken, 
+  accessTokenCookieOptions,
+  clearSessionCookie,
+  clearRefreshCookie
+} from "@/lib/auth";
+import { revokeSession, logAuthAction } from "@/lib/auth-service";
 
-/**
- * POST /api/auth/refresh
- * Re-mints the JWT from the current DB state (picks up is_superadmin changes, etc.)
- * Requires an existing valid session to call.
- */
-export async function POST() {
+export async function POST(request: Request) {
   try {
-    const session = await getSession();
-    if (!session) {
-      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    const cookieStore = await cookies();
+    const refreshToken = cookieStore.get(REFRESH_COOKIE_NAME)?.value;
+
+    if (!refreshToken) {
+      return NextResponse.json({ error: "No refresh token" }, { status: 401 });
     }
 
-    const [users] = await pool.query<RowDataPacket[]>(
-      "SELECT id, email, name, is_superadmin, default_tenant_id FROM users WHERE id = ? LIMIT 1",
-      [session.uid]
+    const refreshTokenHash = crypto.createHash("sha256").update(refreshToken).digest("hex");
+
+    const [sessions] = await pool.query<RowDataPacket[]>(
+      "SELECT * FROM sessions WHERE refresh_token_hash = ? LIMIT 1",
+      [refreshTokenHash]
     );
 
-    if (!users.length) {
-      return NextResponse.json({ error: "User tidak ditemukan." }, { status: 404 });
+    const session = sessions[0];
+
+    // Invalid session or already revoked -> Force logout
+    if (!session || session.revoked || new Date(session.expires_at) < new Date()) {
+      if (session) {
+        await revokeSession(session.id);
+      }
+      
+      const response = NextResponse.json({ error: "Session invalid" }, { status: 401 });
+      response.cookies.set(clearSessionCookie());
+      response.cookies.set(clearRefreshCookie());
+      return response;
     }
+
+    // Check RBAC version
+    const [users] = await pool.query<RowDataPacket[]>(
+      "SELECT auth_version FROM users WHERE id = ? LIMIT 1",
+      [session.user_id]
+    );
 
     const user = users[0];
+    if (!user) {
+      const response = NextResponse.json({ error: "User not found" }, { status: 401 });
+      response.cookies.set(clearSessionCookie());
+      response.cookies.set(clearRefreshCookie());
+      return response;
+    }
 
-    const [members] = await pool.query<RowDataPacket[]>(
-      "SELECT * FROM members WHERE user_id = ? AND status = 'active' ORDER BY joined_at ASC",
-      [user.id]
-    );
-
-    const activeMember =
-      members.find((m) => m.tenant_id === (session.tenantId ?? user.default_tenant_id)) ??
-      members[0] ??
-      null;
-
-    const token = await signToken({
-      uid: user.id,
-      email: user.email,
-      name: user.name,
-      tenantId: activeMember?.tenant_id ?? null,
-      role: activeMember?.role ?? "cashier",
-      branchIds: activeMember?.branch_ids
-        ? typeof activeMember.branch_ids === "string"
-          ? JSON.parse(activeMember.branch_ids)
-          : activeMember.branch_ids
-        : [],
-      isSuperAdmin: Boolean(user.is_superadmin),
+    // Issue new Access Token
+    const authVersion = user.auth_version || 1;
+    const token = await signAccessToken({
+      sid: session.id,
+      uid: session.user_id,
+      ver: authVersion,
     });
 
-    const response = NextResponse.json({ success: true, isSuperAdmin: Boolean(user.is_superadmin) });
-    response.cookies.set(sessionCookieOptions(token));
+    await logAuthAction(session.user_id, session.tenant_id, "TOKEN_REFRESH", request);
+    
+    // Update last activity
+    await pool.query("UPDATE sessions SET last_activity = NOW() WHERE id = ?", [session.id]);
+
+    const response = NextResponse.json({ success: true });
+    response.cookies.set(accessTokenCookieOptions(token));
     return response;
   } catch (error) {
-    console.error("Session refresh error:", error);
-    return NextResponse.json({ error: "Gagal refresh sesi." }, { status: 500 });
+    console.error("Refresh token error:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
