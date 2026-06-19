@@ -169,6 +169,8 @@ export type CheckoutPayload = {
   userId: string;
   userName: string;
   branchId: string;
+  voucherCode?: string;
+  manualDiscount?: any;
 };
 
 export type DashboardStats = {

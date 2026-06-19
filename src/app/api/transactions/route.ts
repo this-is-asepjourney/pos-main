@@ -101,6 +101,7 @@ export async function POST(request: Request) {
         qty: number;
         stock: number;
         subtotal: number;
+        categoryId?: string;
       }>;
       totalPrice: number;
       paidAmount: number;
@@ -108,6 +109,8 @@ export async function POST(request: Request) {
       userId: string;
       userName: string;
       branchId: string;
+      voucherCode?: string;
+      manualDiscount?: any;
     };
 
     if (!body.cart?.length) {
@@ -117,7 +120,38 @@ export async function POST(request: Request) {
       );
     }
 
-    if (body.paidAmount < body.totalPrice) {
+    const { discountService } = await import("@/lib/services/discount-service");
+    const { calculateOrder } = await import("@/lib/pricing-engine");
+
+    const [tenantRows] = await pool.query<RowDataPacket[]>(
+      "SELECT tax_rate, tax_inclusive FROM tenants WHERE id = ?",
+      [session.tenantId]
+    );
+    const taxRate = tenantRows[0]?.tax_rate ? Number(tenantRows[0].tax_rate) : 0;
+    const taxInclusive = Boolean(tenantRows[0]?.tax_inclusive);
+
+    const [rules, voucher] = await Promise.all([
+      discountService.getActiveRules(session.tenantId),
+      body.voucherCode ? discountService.getVoucher(session.tenantId, body.voucherCode) : null
+    ]);
+
+    const pricingResult = calculateOrder({
+      tenantId: session.tenantId,
+      cart: body.cart,
+      voucherCode: body.voucherCode,
+      manualDiscount: body.manualDiscount,
+      taxRate,
+      taxInclusive
+    }, rules, voucher);
+
+    if (pricingResult.errors && pricingResult.errors.length > 0) {
+      return NextResponse.json(
+        { error: pricingResult.errors.join(", ") },
+        { status: 400 },
+      );
+    }
+
+    if (body.paidAmount < pricingResult.total && body.paymentMethod !== 'qris') {
       return NextResponse.json(
         { error: "Nominal bayar kurang dari total belanja." },
         { status: 400 },
@@ -169,8 +203,9 @@ export async function POST(request: Request) {
       // Simpan transaksi
       await conn.query(
         `INSERT INTO transactions (id, tenant_id, invoice_code, branch_id, user_id, user_name,
-         total_price, paid_amount, change_amount, payment_method, status, date_key, month_key)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'completed', ?, ?)`,
+         total_price, paid_amount, change_amount, payment_method, status, date_key, month_key,
+         subtotal, tax_amount, discount_amount, discount_snapshot)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'completed', ?, ?, ?, ?, ?, ?)`,
         [
           transactionId,
           session.tenantId,
@@ -178,12 +213,16 @@ export async function POST(request: Request) {
           branchId,
           body.userId,
           body.userName,
-          body.totalPrice,
+          pricingResult.total,
           body.paidAmount,
-          body.paidAmount - body.totalPrice,
+          body.paymentMethod === 'qris' ? 0 : body.paidAmount - pricingResult.total,
           body.paymentMethod,
           dateKey,
           monthKey,
+          pricingResult.subtotal,
+          pricingResult.taxAmount,
+          pricingResult.discountAmount,
+          JSON.stringify(pricingResult.appliedDiscounts),
         ],
       );
 
@@ -194,6 +233,20 @@ export async function POST(request: Request) {
            VALUES (?, ?, ?, ?, ?, ?)`,
           [transactionId, item.productId, item.name, item.price, item.qty, item.subtotal],
         );
+      }
+
+      // Save transaction discounts
+      await discountService.saveTransactionDiscounts(
+        transactionId,
+        session.tenantId,
+        pricingResult.appliedDiscounts,
+        conn
+      );
+
+      // Update voucher usage
+      const appliedVoucher = pricingResult.appliedDiscounts.find(ad => ad.type === "VOUCHER");
+      if (appliedVoucher && appliedVoucher.id) {
+        await discountService.markVoucherUsed(session.tenantId, appliedVoucher.id, conn);
       }
 
       await conn.commit();
@@ -210,8 +263,8 @@ export async function POST(request: Request) {
       userId: body.userId || session.uid,
       userName: body.userName || session.name,
       action: "CREATE_TRANSACTION",
-      description: `Membuat transaksi dengan invoice: ${invoiceCode} senilai Rp${body.totalPrice.toLocaleString()}`,
-      metadata: { invoiceCode, total: body.totalPrice, items: body.cart.length }
+      description: `Membuat transaksi dengan invoice: ${invoiceCode} senilai Rp${pricingResult.total.toLocaleString()}`,
+      metadata: { invoiceCode, total: pricingResult.total, subtotal: pricingResult.subtotal, discount: pricingResult.discountAmount, tax: pricingResult.taxAmount, items: body.cart.length }
     });
 
     return NextResponse.json({ invoiceCode }, { status: 201 });

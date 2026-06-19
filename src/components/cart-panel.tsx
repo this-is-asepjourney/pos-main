@@ -18,6 +18,9 @@ type CartPanelProps = {
   onDecrease: (productId: string) => void;
   onRemove: (productId: string) => void;
   onCheckout: () => void;
+  pricingResult?: any;
+  voucherCode?: string;
+  onVoucherCodeChange?: (code: string) => void;
 };
 
 const paymentMethods: Array<{ value: PaymentMethod; label: string }> = [
@@ -37,15 +40,19 @@ export function CartPanel({
   onDecrease,
   onRemove,
   onCheckout,
+  pricingResult,
+  voucherCode = "",
+  onVoucherCodeChange,
 }: CartPanelProps) {
-  const total = cart.reduce((sum, item) => sum + item.subtotal, 0);
+  const total = pricingResult?.total ?? cart.reduce((sum, item) => sum + item.subtotal, 0);
   const change = Math.max(0, paidAmount - total);
   const qrisImageUrl = paymentMethod === "qris" ? createQrisImageUrl(total) : "";
   const canCheckout =
     cart.length > 0 &&
     paidAmount >= total &&
     !isCheckingOut &&
-    (paymentMethod !== "qris" || isQrisConfigured);
+    (paymentMethod !== "qris" || isQrisConfigured) &&
+    (!pricingResult?.errors);
 
   return (
     <section className="flex h-full flex-col rounded-[2rem] bg-slate-950 p-5 text-white shadow-2xl shadow-slate-950/20">
@@ -114,7 +121,25 @@ export function CartPanel({
         )}
       </div>
 
-      <div className="mt-6 space-y-4 border-t border-white/10 pt-5">
+      <div className="mt-4 px-1">
+        <label className="block">
+          <span className="text-xs font-semibold text-slate-400">Voucher Promo (Opsional)</span>
+          <div className="flex gap-2 mt-1">
+            <input
+              type="text"
+              value={voucherCode}
+              onChange={(e) => onVoucherCodeChange?.(e.target.value.toUpperCase())}
+              placeholder="Kode Voucher..."
+              className="w-full rounded-xl border border-white/10 bg-white/10 px-3 py-2 text-sm font-bold uppercase tracking-wider outline-none ring-cyan-300/40 transition placeholder:text-slate-500 focus:ring-2"
+            />
+          </div>
+        </label>
+        {pricingResult?.errors && (
+          <p className="mt-1 text-xs text-rose-400">{pricingResult.errors.join(", ")}</p>
+        )}
+      </div>
+
+      <div className="mt-4 space-y-4 border-t border-white/10 pt-4">
         <div className="grid grid-cols-3 gap-2">
           {paymentMethods.map((method) => (
             <button
@@ -180,12 +205,28 @@ export function CartPanel({
             <span>{cart.reduce((sum, item) => sum + item.qty, 0)} item</span>
           </div>
           <div className="flex justify-between text-sm text-slate-500">
-            <span>Total belanja</span>
-            <span>{formatCurrency(total)}</span>
+            <span>Subtotal</span>
+            <span>{formatCurrency(pricingResult?.subtotal ?? cart.reduce((sum, item) => sum + item.subtotal, 0))}</span>
+          </div>
+          {pricingResult?.discountAmount > 0 && (
+            <div className="flex justify-between text-sm font-bold text-emerald-600">
+              <span>Diskon</span>
+              <span>-{formatCurrency(pricingResult.discountAmount)}</span>
+            </div>
+          )}
+          {pricingResult?.taxAmount > 0 && (
+            <div className="flex justify-between text-sm font-semibold text-rose-600">
+              <span>Pajak</span>
+              <span>+{formatCurrency(pricingResult.taxAmount)}</span>
+            </div>
+          )}
+          <div className="flex justify-between text-sm font-black text-slate-900 border-t border-slate-100 mt-2 pt-2">
+            <span>Total Bayar</span>
+            <span className="text-lg">{formatCurrency(total)}</span>
           </div>
           <div className="flex items-end justify-between border-t border-slate-200 pt-3">
             <span className="font-bold">Kembalian</span>
-            <span className="text-2xl font-black text-cyan-700">{formatCurrency(change)}</span>
+            <span className="text-xl font-black text-cyan-700">{formatCurrency(change)}</span>
           </div>
         </div>
 

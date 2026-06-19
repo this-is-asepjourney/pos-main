@@ -22,7 +22,8 @@ import {
   Receipt,
   Package,
   Clock,
-  Activity
+  Activity,
+  Sparkles
 } from "lucide-react";
 import { useAuth } from "@/components/app-provider";
 import { BrandMark } from "@/components/brand-mark";
@@ -41,6 +42,8 @@ const navItems = [
   { label: "Transaksi", href: "/transactions", icon: Receipt, roles: ["owner", "admin"] },
   { label: "Produk", href: "/products", icon: Package, roles: ["owner", "admin"] },
   { label: "Shift", href: "/attendance", icon: Clock, roles: ["owner", "admin", "cashier"] },
+  { label: "Diskon", href: "/discounts", icon: Sparkles, roles: ["owner", "admin"] },
+  { label: "Pengaturan", href: "/settings", icon: Building2, roles: ["owner", "admin"] },
   { label: "Log Aktivitas", href: "/activity-logs", icon: Activity, roles: ["owner", "admin"] },
   { label: "Langganan", href: "/subscription", icon: CreditCard, roles: ["owner"] },
 ];

@@ -35,6 +35,10 @@ export default function CashierPage() {
   const [successPopup, setSuccessPopup] = useState("");
   const [cartSidebarOpen, setCartSidebarOpen] = useState(true);
 
+  // Pricing Engine State
+  const [voucherCode, setVoucherCode] = useState("");
+  const [pricingResult, setPricingResult] = useState<any>(null);
+
   const fetchData = async () => {
     if (!tenantId) return;
     try {
@@ -63,7 +67,31 @@ export default function CashierPage() {
     });
   }, [activeCategory, products, query]);
 
-  const total = cart.reduce((sum, item) => sum + item.subtotal, 0);
+  // Call Pricing Engine automatically
+  useEffect(() => {
+    if (cart.length === 0) {
+      setPricingResult(null);
+      return;
+    }
+
+    const delayDebounceFn = setTimeout(async () => {
+      try {
+        const res = await fetch("/api/transactions/calculate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ cart, voucherCode })
+        });
+        const data = await res.json();
+        setPricingResult(data);
+      } catch (err) {
+        console.error("Pricing error:", err);
+      }
+    }, 500);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [cart, voucherCode]);
+
+  const total = pricingResult?.total ?? cart.reduce((sum, item) => sum + item.subtotal, 0);
   const effectivePaidAmount = paymentMethod === "qris" ? total : paidAmount;
   const lowStockProducts = products.filter((product) => product.stock <= 10).length;
 
@@ -136,11 +164,14 @@ export default function CashierPage() {
         userId: user?.uid ?? "demo-admin",
         userName: displayName,
         branchId: branchActive,
+        voucherCode: voucherCode || undefined,
       });
       const successMessage = `Transaksi ${invoiceCode} berhasil disimpan.`;
       setNotice({ type: "success", message: successMessage });
       setSuccessPopup(successMessage);
       setCart([]);
+      setVoucherCode("");
+      setPricingResult(null);
       setPaidAmount(0);
       // Refresh produk setelah checkout untuk update stok
       fetchData();
@@ -305,6 +336,9 @@ export default function CashierPage() {
               onRemove={(productId) =>
                 setCart((currentCart) => currentCart.filter((item) => item.productId !== productId))
               }
+              pricingResult={pricingResult}
+              voucherCode={voucherCode}
+              onVoucherCodeChange={setVoucherCode}
               onCheckout={handleCheckout}
             />
           </div>
