@@ -302,7 +302,7 @@ export default function CashierPage() {
             </div>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-2 2xl:grid-cols-3">
             {filteredProducts.map((product) => (
               <ProductCard key={product.id} product={product} onAdd={addToCart} />
             ))}
@@ -310,38 +310,38 @@ export default function CashierPage() {
         </section>
 
         {cartSidebarOpen ? (
-          <div className="xl:sticky xl:top-6 xl:h-[calc(100vh-3rem)]">
-            <div className="mb-3 flex justify-end xl:hidden">
-              <button
-                type="button"
-                onClick={() => setCartSidebarOpen(false)}
-                className="flex items-center gap-2 rounded-2xl bg-slate-950 px-4 py-2 text-sm font-black text-white"
-              >
-                <PanelRightClose size={16} />
-                Hide Keranjang
-              </button>
-            </div>
-            <CartPanel
-              cart={cart}
-              paidAmount={effectivePaidAmount}
-              paymentMethod={paymentMethod}
-              isCheckingOut={isCheckingOut}
-              onPaidAmountChange={setPaidAmount}
-              onPaymentMethodChange={(method) => {
-                setPaymentMethod(method);
-                setPaidAmount(0);
-              }}
-              onIncrease={increaseQty}
-              onDecrease={decreaseQty}
-              onRemove={(productId) =>
-                setCart((currentCart) => currentCart.filter((item) => item.productId !== productId))
-              }
-              pricingResult={pricingResult}
-              voucherCode={voucherCode}
-              onVoucherCodeChange={setVoucherCode}
-              onCheckout={handleCheckout}
+          <>
+            <div 
+              className="fixed inset-0 z-40 bg-slate-950/60 backdrop-blur-sm transition-opacity xl:hidden"
+              onClick={() => setCartSidebarOpen(false)}
             />
-          </div>
+            <div className={clsx(
+              "fixed inset-y-0 right-0 z-50 w-full max-w-md p-4 transition-transform xl:static xl:z-auto xl:w-auto xl:max-w-none xl:translate-x-0 xl:p-0",
+              "xl:sticky xl:top-6 xl:h-[calc(100vh-3rem)]"
+            )}>
+              <CartPanel
+                onClose={() => setCartSidebarOpen(false)}
+                cart={cart}
+                paidAmount={effectivePaidAmount}
+                paymentMethod={paymentMethod}
+                isCheckingOut={isCheckingOut}
+                onPaidAmountChange={setPaidAmount}
+                onPaymentMethodChange={(method) => {
+                  setPaymentMethod(method);
+                  setPaidAmount(0);
+                }}
+                onIncrease={increaseQty}
+                onDecrease={decreaseQty}
+                onRemove={(productId) =>
+                  setCart((currentCart) => currentCart.filter((item) => item.productId !== productId))
+                }
+                pricingResult={pricingResult}
+                voucherCode={voucherCode}
+                onVoucherCodeChange={setVoucherCode}
+                onCheckout={handleCheckout}
+              />
+            </div>
+          </>
         ) : null}
       </div>
     </AppShell>

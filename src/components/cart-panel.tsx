@@ -1,6 +1,6 @@
 "use client";
 
-import { Minus, Plus, Receipt, Trash2 } from "lucide-react";
+import { Minus, Plus, Receipt, Trash2, X } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
 import { createQrisImageUrl, isQrisConfigured } from "@/lib/qris";
 import type { CartItem, PaymentMethod } from "@/types/pos";
@@ -21,6 +21,7 @@ type CartPanelProps = {
   pricingResult?: any;
   voucherCode?: string;
   onVoucherCodeChange?: (code: string) => void;
+  onClose?: () => void;
 };
 
 const paymentMethods: Array<{ value: PaymentMethod; label: string }> = [
@@ -43,6 +44,7 @@ export function CartPanel({
   pricingResult,
   voucherCode = "",
   onVoucherCodeChange,
+  onClose,
 }: CartPanelProps) {
   const total = pricingResult?.total ?? cart.reduce((sum, item) => sum + item.subtotal, 0);
   const change = Math.max(0, paidAmount - total);
@@ -61,9 +63,20 @@ export function CartPanel({
           <p className="text-sm text-slate-400">Keranjang</p>
           <h2 className="text-2xl font-black tracking-tight">Order Aktif</h2>
         </div>
-        <span className="flex size-12 items-center justify-center rounded-2xl bg-cyan-400 text-slate-950">
-          <Receipt size={23} />
-        </span>
+        <div className="flex gap-2">
+          {onClose && (
+            <button
+              onClick={onClose}
+              className="flex size-12 items-center justify-center rounded-2xl bg-white/10 text-white xl:hidden hover:bg-white/20 transition"
+              aria-label="Tutup Keranjang"
+            >
+              <X size={23} />
+            </button>
+          )}
+          <span className="flex size-12 items-center justify-center rounded-2xl bg-cyan-400 text-slate-950">
+            <Receipt size={23} />
+          </span>
+        </div>
       </div>
 
       <div className="mt-6 flex-1 space-y-3 overflow-y-auto pr-1">
