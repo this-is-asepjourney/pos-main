@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
-import { uploadFileToGCS } from "@/lib/gcs";
+import { uploadFileToMinio } from "@/lib/minio";
 
 export async function POST(request: Request) {
   try {
@@ -24,8 +24,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Ukuran file terlalu besar (Maksimal 5MB)" }, { status: 400 });
     }
 
-    // Upload to GCS
-    const publicUrl = await uploadFileToGCS(
+    // Upload to MinIO
+    const publicUrl = await uploadFileToMinio(
       buffer,
       file.name,
       file.type,
@@ -34,7 +34,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ url: publicUrl }, { status: 201 });
   } catch (error: any) {
-    console.error("Upload to GCS error:", error);
+    console.error("Upload to MinIO error:", error);
     return NextResponse.json(
       { error: error.message || "Gagal mengunggah file." },
       { status: 500 }

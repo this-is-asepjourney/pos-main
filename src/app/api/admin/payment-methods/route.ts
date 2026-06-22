@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import pool from "@/lib/db";
-import { uploadFileToGCS } from "@/lib/gcs";
+import { uploadFileToMinio } from "@/lib/minio";
 
 export async function GET() {
   try {
@@ -26,7 +26,7 @@ export async function POST(req: Request) {
     let qrImageUrl = "";
     if (file && file.size > 0) {
       const buffer = Buffer.from(await file.arrayBuffer());
-      qrImageUrl = await uploadFileToGCS(buffer, file.name, file.type, "payments");
+      qrImageUrl = await uploadFileToMinio(buffer, file.name, file.type, "payments");
     }
 
     const conn = pool;
