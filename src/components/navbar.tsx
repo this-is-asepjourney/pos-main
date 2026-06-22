@@ -127,6 +127,19 @@ export function Navbar() {
           <Link href="/" aria-label="Bro-POS home">
             <BrandMark textClassName="text-white" />
           </Link>
+          <div className="flex items-center gap-3 lg:hidden">
+            <div className="text-right">
+              <p className="text-xs font-semibold">{displayName}</p>
+              <p className="text-[9px] uppercase tracking-[0.16em] text-cyan-300">{role}</p>
+            </div>
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="rounded-xl bg-white/10 p-2 text-slate-200 transition hover:bg-white/20"
+            >
+              <LogOut size={16} />
+            </button>
+          </div>
         </div>
 
         {tenantId ? (
@@ -146,7 +159,7 @@ export function Navbar() {
         </Link>
       ) : null}
 
-      <nav className="flex gap-2 overflow-x-auto lg:flex-col lg:overflow-visible">
+      <nav className="flex gap-2 overflow-x-auto pb-2 lg:pb-0 lg:flex-col lg:overflow-visible [&::-webkit-scrollbar]:hidden scroll-smooth">
         {navItems
           .filter((item) => item.roles.includes(role))
           .map((item) => {
@@ -209,22 +222,7 @@ export function Navbar() {
         </div>
       </nav>
 
-      <div className="rounded-2xl border border-white/10 bg-white/5 p-3 lg:hidden">
-        <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Operator</p>
-        <div className="mt-2 flex items-center justify-between gap-2">
-          <div>
-            <p className="text-sm font-semibold">{displayName}</p>
-            <p className="text-[11px] uppercase tracking-[0.16em] text-cyan-300">{role}</p>
-          </div>
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="rounded-xl bg-white/10 px-3 py-2 text-xs font-semibold text-slate-200"
-          >
-            Keluar
-          </button>
-        </div>
-      </div>
+
 
       <div className="mt-auto hidden rounded-3xl border border-white/10 bg-white/5 p-4 lg:block">
         <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Operator</p>

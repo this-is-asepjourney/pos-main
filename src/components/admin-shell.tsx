@@ -133,20 +133,20 @@ export function AdminShell({ children }: { children: ReactNode }) {
       </aside>
 
       {/* Mobile Top Bar */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 z-30 bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between">
-        <Link href="/admin"><BrandMark /></Link>
-        <nav className="flex gap-1">
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-white border-b border-slate-200 px-4 py-3 flex items-center gap-4">
+        <Link href="/admin" className="flex-shrink-0"><BrandMark /></Link>
+        <nav className="flex gap-1 flex-1 overflow-x-auto items-center justify-end pb-1 [&::-webkit-scrollbar]:hidden scroll-smooth">
           {navItems.map((item) => {
             const Icon = item.icon;
             const active = item.exact ? pathname === item.href : pathname.startsWith(item.href);
             return (
               <Link key={item.href} href={item.href}
-                className={clsx("rounded-xl p-2 transition", active ? "bg-slate-950 text-white" : "text-slate-500 hover:bg-slate-100")}>
+                className={clsx("rounded-xl p-2 transition flex-shrink-0", active ? "bg-slate-950 text-white" : "text-slate-500 hover:bg-slate-100")}>
                 <Icon size={16} />
               </Link>
             );
           })}
-          <button onClick={logout} className="rounded-xl p-2 text-slate-500 hover:bg-slate-100 transition">
+          <button onClick={logout} className="rounded-xl p-2 text-slate-500 hover:bg-slate-100 transition flex-shrink-0 ml-1">
             <LogOut size={16} />
           </button>
         </nav>

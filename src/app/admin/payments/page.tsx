@@ -437,8 +437,7 @@ export default function AdminPaymentsPage() {
           </div>
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
           {loading ? (
             Array.from({ length: 4 }).map((_, i) => (
               <div key={i} className="h-28 rounded-3xl bg-slate-100 animate-pulse" />

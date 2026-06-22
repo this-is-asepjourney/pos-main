@@ -86,7 +86,7 @@ export default function AdminDashboardPage() {
         </div>
 
         {/* Stat Cards */}
-        <div className="grid grid-cols-2 xl:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
           {loading ? (
             Array.from({ length: 5 }).map((_, i) => (
               <div key={i} className="h-28 rounded-3xl bg-slate-100 animate-pulse" />
