@@ -29,7 +29,7 @@ export async function GET(request: Request) {
         // Kirim notifikasi
         const dateStr = new Date(row.current_period_end).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
         await conn.query(
-          "INSERT INTO admin_notifications (id, target_tenant_id, type, title, message) VALUES (UUID(), ?, 'warning', 'Masa Tenggat Langganan', ?)",
+          "INSERT INTO admin_notifications (target_tenant_id, type, title, message) VALUES (?, 'warning', 'Masa Tenggat Langganan', ?)",
           [row.tenant_id, `Langganan Anda akan berakhir pada ${dateStr}. Mohon segera perpanjang langganan Anda untuk menghindari gangguan layanan.`]
         );
 

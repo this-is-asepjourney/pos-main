@@ -57,7 +57,7 @@ export async function POST(request: Request) {
         // Notify admin if tenant owner has reached 5 attempts
         if (failCount === 5 && user.default_tenant_id) {
           await pool.query(
-            "INSERT INTO admin_notifications (id, target_tenant_id, type, title, message) VALUES (UUID(), ?, 'warning', 'Peringatan Keamanan', 'Terdapat 5 kali percobaan gagal saat login ke akun Anda. Mohon pastikan akun Anda aman.')",
+            "INSERT INTO admin_notifications (target_tenant_id, type, title, message) VALUES (?, 'warning', 'Peringatan Keamanan', 'Terdapat 5 kali percobaan gagal saat login ke akun Anda. Mohon pastikan akun Anda aman.')",
             [user.default_tenant_id]
           );
         }
