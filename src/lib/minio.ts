@@ -25,8 +25,9 @@ export async function uploadFileToMinio(
   buffer: Buffer,
   originalFilename: string,
   mimeType: string,
-  folder: string = "uploads"
-): Promise<string> {
+  folder: string = "uploads",
+  tenantId?: string | null
+): Promise<{ url: string; minioPath: string }> {
   const bucketName = process.env.MINIO_BUCKET_NAME || "pos-bucket";
 
   // Memastikan bucket ada, jika tidak, bisa dibuat (opsional)
@@ -35,13 +36,18 @@ export async function uploadFileToMinio(
   const ext = originalFilename.split(".").pop();
   const timestamp = new Date().getTime();
   const randomStr = Math.random().toString(36).substring(2, 8);
-  const newFilename = `${folder}/${timestamp}-${randomStr}.${ext}`;
+  
+  const baseFolder = tenantId ? `${tenantId}/${folder}` : `system/${folder}`;
+  const newFilename = `${baseFolder}/${timestamp}-${randomStr}.${ext}`;
 
   await minioClient.putObject(bucketName, newFilename, buffer, buffer.length, {
     "Content-Type": mimeType,
   });
 
-  return `/api/files?path=${encodeURIComponent(newFilename)}`;
+  return {
+    url: `/api/files?path=${encodeURIComponent(newFilename)}`,
+    minioPath: newFilename,
+  };
 }
 
 /**

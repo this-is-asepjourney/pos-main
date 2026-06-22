@@ -26,7 +26,8 @@ export async function POST(req: Request) {
     let qrImageUrl = "";
     if (file && file.size > 0) {
       const buffer = Buffer.from(await file.arrayBuffer());
-      qrImageUrl = await uploadFileToMinio(buffer, file.name, file.type, "payments");
+      const uploadResult = await uploadFileToMinio(buffer, file.name, file.type, "payments");
+      qrImageUrl = uploadResult.url;
     }
 
     const conn = pool;

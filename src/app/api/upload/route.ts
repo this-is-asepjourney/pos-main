@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { uploadFileToMinio } from "@/lib/minio";
+import pool from "@/lib/db";
+import { v4 as uuidv4 } from "uuid";
 
 export async function POST(request: Request) {
   try {
@@ -25,14 +27,33 @@ export async function POST(request: Request) {
     }
 
     // Upload to MinIO
-    const publicUrl = await uploadFileToMinio(
+    const uploadResult = await uploadFileToMinio(
       buffer,
       file.name,
       file.type,
-      folder
+      folder,
+      session.tenantId
     );
 
-    return NextResponse.json({ url: publicUrl }, { status: 201 });
+    const fileId = uuidv4();
+    const conn = pool;
+    await conn.execute(
+      `INSERT INTO files 
+       (id, tenant_id, folder, original_filename, file_path, mime_type, size, created_by) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        fileId,
+        session.tenantId || null,
+        folder,
+        file.name,
+        uploadResult.minioPath,
+        file.type,
+        buffer.length,
+        session.uid || null
+      ]
+    );
+
+    return NextResponse.json({ url: uploadResult.url }, { status: 201 });
   } catch (error: any) {
     console.error("Upload to MinIO error:", error);
     return NextResponse.json(
