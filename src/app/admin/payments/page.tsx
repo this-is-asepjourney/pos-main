@@ -191,6 +191,22 @@ function RequestModal({
             </div>
           </div>
 
+          {/* Payment proof image */}
+          {request.paymentProofUrl && (
+            <div className="rounded-2xl bg-indigo-50 border border-indigo-100 p-4">
+              <p className="text-[10px] font-black uppercase tracking-widest text-indigo-400 mb-2">Bukti Transfer / Pembayaran</p>
+              {request.paymentProofUrl.toLowerCase().endsWith('.pdf') ? (
+                <a href={request.paymentProofUrl} target="_blank" rel="noreferrer" className="text-sm font-bold text-indigo-600 hover:underline flex items-center gap-2">
+                  <Receipt size={16} /> Lihat File PDF Bukti Pembayaran
+                </a>
+              ) : (
+                <a href={request.paymentProofUrl} target="_blank" rel="noreferrer" className="block text-center bg-white rounded-xl overflow-hidden border border-indigo-200 hover:border-indigo-400 transition">
+                  <img src={request.paymentProofUrl} alt="Bukti Pembayaran" className="max-w-full max-h-64 object-contain mx-auto" />
+                </a>
+              )}
+            </div>
+          )}
+
           {/* Payment proof note */}
           {request.paymentProofNote && (
             <div className="rounded-2xl bg-blue-50 border border-blue-100 p-4">

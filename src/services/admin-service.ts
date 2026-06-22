@@ -219,6 +219,7 @@ export type AdminSubscriptionRequest = {
   currentPlanId: string;
   paymentMethod: string;
   paymentProofNote: string | null;
+  paymentProofUrl: string | null;
   amountIdr: number;
   status: "pending" | "approved" | "rejected" | "cancelled";
   adminNote: string | null;

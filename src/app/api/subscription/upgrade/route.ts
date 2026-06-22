@@ -18,7 +18,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Hanya owner yang dapat mengubah subscription." }, { status: 403 });
     }
 
-    const { planId, paymentMethod = "manual", paymentProofNote = "" } = await request.json();
+    const { planId, paymentMethod = "manual", paymentProofNote = "", paymentProofUrl = "" } = await request.json();
 
     if (!planId) {
       return NextResponse.json({ error: "Plan ID wajib diisi." }, { status: 400 });
@@ -107,9 +107,9 @@ export async function POST(request: Request) {
 
       // Insert subscription request
       await conn.query(
-        `INSERT INTO subscription_requests (id, tenant_id, tenant_name, requested_plan_id, requested_plan_name, current_plan_id, payment_method, payment_proof_note, amount_idr, status)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
-        [requestId, session.tenantId, tenantName, planId, plan.name, currentPlanId, paymentMethod, paymentProofNote || null, plan.price_idr]
+        `INSERT INTO subscription_requests (id, tenant_id, tenant_name, requested_plan_id, requested_plan_name, current_plan_id, payment_method, payment_proof_note, payment_proof_url, amount_idr, status)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
+        [requestId, session.tenantId, tenantName, planId, plan.name, currentPlanId, paymentMethod, paymentProofNote || null, paymentProofUrl || null, plan.price_idr]
       );
 
       // Update subscription status to pending_approval

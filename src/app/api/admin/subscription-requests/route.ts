@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
          sr.id, sr.tenant_id as tenantId, sr.tenant_name as tenantName,
          sr.requested_plan_id as requestedPlanId, sr.requested_plan_name as requestedPlanName,
          sr.current_plan_id as currentPlanId, sr.payment_method as paymentMethod,
-         sr.payment_proof_note as paymentProofNote, sr.amount_idr as amountIdr,
+         sr.payment_proof_note as paymentProofNote, sr.payment_proof_url as paymentProofUrl, sr.amount_idr as amountIdr,
          sr.status, sr.admin_note as adminNote,
          sr.approved_by as approvedBy, sr.approved_at as approvedAt,
          sr.rejected_at as rejectedAt, sr.created_at as createdAt,

@@ -127,22 +127,42 @@ function PaymentModal({
   plan: Plan;
   currentPlanId: string;
   availableMethods: PaymentMethodItem[];
-  onConfirm: (planId: string, method: string, proofNote: string) => Promise<{ requiresApproval: boolean }>;
+  onConfirm: (planId: string, method: string, proofNote: string, proofUrl: string) => Promise<{ requiresApproval: boolean }>;
   onClose: () => void;
 }) {
   const [methodId, setMethodId] = useState<number>(availableMethods.length > 0 ? availableMethods[0].id : 0);
   const [proofNote, setProofNote] = useState("");
+  const [proofFile, setProofFile] = useState<File | null>(null);
   const [step, setStep] = useState<"choose" | "confirm" | "processing" | "done" | "pending">("choose");
   const [error, setError] = useState("");
   const isFree = plan.priceIdr === 0;
 
   const handlePay = async () => {
+    if (!isFree && !proofFile) {
+      setError("Silakan unggah bukti transfer pembayaran.");
+      return;
+    }
     setStep("processing");
     setError("");
     try {
+      let proofUrl = "";
+      if (proofFile) {
+        const formData = new FormData();
+        formData.append("file", proofFile);
+        formData.append("folder", "payment_proofs");
+        
+        const uploadRes = await fetch("/api/upload", {
+          method: "POST",
+          body: formData,
+        });
+        const uploadJson = await uploadRes.json();
+        if (!uploadRes.ok) throw new Error(uploadJson.error || "Gagal mengunggah bukti pembayaran.");
+        proofUrl = uploadJson.url;
+      }
+
       const selectedMethod = availableMethods.find(m => m.id === methodId);
       const methodLabel = selectedMethod ? selectedMethod.name : "manual";
-      const result = await onConfirm(plan.id, isFree ? "free" : methodLabel, proofNote);
+      const result = await onConfirm(plan.id, isFree ? "free" : methodLabel, proofNote, proofUrl);
       if (result.requiresApproval) {
         setStep("pending");
       } else {
@@ -319,7 +339,8 @@ function PaymentModal({
               </div>
 
               <button onClick={() => setStep("confirm")}
-                className="w-full rounded-2xl bg-indigo-600 py-3.5 text-sm font-black text-white hover:bg-indigo-700 transition flex items-center justify-center gap-2">
+                disabled={availableMethods.length === 0}
+                className={clsx("w-full rounded-2xl py-3.5 text-sm font-black transition flex items-center justify-center gap-2", availableMethods.length === 0 ? "bg-slate-300 text-slate-500 cursor-not-allowed" : "bg-indigo-600 text-white hover:bg-indigo-700")}>
                 Lanjut <ArrowRight size={16} />
               </button>
             </>
@@ -366,6 +387,26 @@ function PaymentModal({
                   <span className="font-black text-indigo-600 text-lg">{formatCurrency(plan.priceIdr)}</span>
                 </div>
               </div>
+
+              {/* Proof Upload */}
+              {!isFree && (
+                <div className="mb-5">
+                  <label className="text-xs font-black uppercase tracking-widest text-slate-400 block mb-2">
+                    Bukti Transfer <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="file"
+                    accept="image/*,application/pdf"
+                    onChange={(e) => {
+                      if (e.target.files && e.target.files[0]) {
+                        setProofFile(e.target.files[0]);
+                      }
+                    }}
+                    className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-bold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer"
+                  />
+                  <p className="text-[10px] text-slate-400 mt-1">Unggah bukti bayar agar admin dapat memverifikasi. (JPG, PNG)</p>
+                </div>
+              )}
 
               {/* Important notice */}
               <div className="rounded-2xl bg-amber-50 border border-amber-200 px-4 py-3 mb-5 flex gap-2">
