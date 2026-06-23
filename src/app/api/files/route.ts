@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getSignedUrlForFile } from "@/lib/minio";
+import { minioClient } from "@/lib/minio";
 
 export async function GET(request: Request) {
   try {
@@ -10,18 +10,46 @@ export async function GET(request: Request) {
       return new NextResponse("Missing 'path' parameter", { status: 400 });
     }
 
-    // You might want to add session/auth check here if you want to restrict
-    // access to logged-in users. E.g.:
-    // const session = await getSession();
-    // if (!session) return new NextResponse("Unauthorized", { status: 401 });
+    const bucketName = process.env.MINIO_BUCKET_NAME || "pos-bucket";
 
-    // Generate a presigned URL valid for 1 hour (3600 seconds)
-    const signedUrl = await getSignedUrlForFile(path, 3600);
+    // Stream file directly from MinIO (server-side), no redirect to MinIO port
+    const stream: NodeJS.ReadableStream = await new Promise((resolve, reject) => {
+      minioClient.getObject(bucketName, path, (err, dataStream) => {
+        if (err) return reject(err);
+        resolve(dataStream);
+      });
+    });
 
-    // Redirect the client to the presigned MinIO URL
-    return NextResponse.redirect(signedUrl, { status: 302 });
+    // Detect content type from extension
+    const ext = path.split(".").pop()?.toLowerCase() ?? "";
+    const contentTypeMap: Record<string, string> = {
+      jpg: "image/jpeg",
+      jpeg: "image/jpeg",
+      png: "image/png",
+      gif: "image/gif",
+      webp: "image/webp",
+      svg: "image/svg+xml",
+      pdf: "application/pdf",
+    };
+    const contentType = contentTypeMap[ext] ?? "application/octet-stream";
+
+    // Collect stream into buffer and return
+    const chunks: Buffer[] = [];
+    for await (const chunk of stream) {
+      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    }
+    const buffer = Buffer.concat(chunks);
+
+    return new NextResponse(buffer, {
+      status: 200,
+      headers: {
+        "Content-Type": contentType,
+        "Cache-Control": "public, max-age=86400", // cache 1 day
+        "Content-Length": buffer.length.toString(),
+      },
+    });
   } catch (error: any) {
-    console.error("Failed to generate signed URL:", error);
-    return new NextResponse("Internal Server Error", { status: 500 });
+    console.error("Failed to proxy file from MinIO:", error);
+    return new NextResponse("Not Found", { status: 404 });
   }
 }
