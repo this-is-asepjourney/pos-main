@@ -182,7 +182,7 @@ export function Navbar() {
             );
           })}
         {isSuperAdmin ? (
-          <div className="mt-4 border-t border-white/10 pt-4 hidden lg:block">
+          <div className="flex shrink-0 lg:mt-4 lg:block lg:border-t lg:border-white/10 lg:pt-4">
             <Link
               href="/admin"
               className="flex min-w-max items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold text-emerald-400 hover:bg-white/10 transition"
@@ -193,13 +193,13 @@ export function Navbar() {
           </div>
         ) : null}
         
-        <div className="mt-4 border-t border-white/10 pt-4 hidden lg:block space-y-2">
+        <div className="flex shrink-0 gap-2 lg:mt-4 lg:block lg:space-y-2 lg:border-t lg:border-white/10 lg:pt-4">
           <button
             onClick={() => {
               setShowNotifModal(true);
               setUnreadCount(0);
             }}
-            className="flex w-full items-center justify-between rounded-2xl px-4 py-3 text-sm font-semibold text-slate-300 hover:bg-white/10 hover:text-white transition"
+            className="flex min-w-max items-center justify-between gap-3 rounded-2xl px-4 py-3 text-sm font-semibold text-slate-300 hover:bg-white/10 hover:text-white transition"
           >
             <div className="flex items-center gap-3">
               <Bell size={18} />
@@ -214,7 +214,7 @@ export function Navbar() {
           
           <button
             onClick={() => setShowFeedbackModal(true)}
-            className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold text-slate-300 hover:bg-white/10 hover:text-white transition"
+            className="flex min-w-max items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold text-slate-300 hover:bg-white/10 hover:text-white transition"
           >
             <MessageSquareWarning size={18} />
             Bantuan & Laporan
