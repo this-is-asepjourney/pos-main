@@ -13,7 +13,8 @@ export async function middleware(request: NextRequest) {
   const isAdmin = request.nextUrl.pathname.startsWith("/admin");
   const isProtectedApi = request.nextUrl.pathname.startsWith("/api/") && 
     !request.nextUrl.pathname.startsWith("/api/auth/login") &&
-    !request.nextUrl.pathname.startsWith("/api/auth/refresh");
+    !request.nextUrl.pathname.startsWith("/api/auth/refresh") &&
+    !request.nextUrl.pathname.startsWith("/api/auth/register");
 
   if (!isDashboard && !isAdmin && !isProtectedApi) {
     return NextResponse.next();

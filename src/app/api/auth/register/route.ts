@@ -106,15 +106,18 @@ export async function POST(request: Request) {
       conn.release();
     }
 
-    const token = await signToken({
+    const { createSession, logAuthAction } = await import("@/lib/auth-service");
+    const { signAccessToken, accessTokenCookieOptions, refreshTokenCookieOptions } = await import("@/lib/auth");
+
+    const { sid, refreshToken } = await createSession(userId, tenantId, "owner", ["*"], request);
+    
+    const token = await signAccessToken({
+      sid,
       uid: userId,
-      email,
-      name,
-      tenantId,
-      role: "owner",
-      branchIds: ["*"],
-      isSuperAdmin: false,
+      ver: 1,
     });
+
+    await logAuthAction(userId, tenantId, "REGISTER_SUCCESS", request);
 
     const response = NextResponse.json({
       uid: userId,
@@ -124,7 +127,8 @@ export async function POST(request: Request) {
       role: "owner",
     });
 
-    response.cookies.set(sessionCookieOptions(token));
+    response.cookies.set(accessTokenCookieOptions(token));
+    response.cookies.set(refreshTokenCookieOptions(refreshToken));
     return response;
   } catch (error) {
     console.error("Register error:", error);
