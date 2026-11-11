@@ -1,11 +1,11 @@
 "use client";
 
 import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
-import { Boxes, Download, FileSpreadsheet, ImageUp, LoaderCircle, PackagePlus, PencilLine, Plus, Save, Search, Trash2 } from "lucide-react";
+import { Boxes, Download, FileSpreadsheet, ImageUp, LoaderCircle, PackagePlus, PencilLine, Plus, RefreshCw, Save, Search, Trash2 } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { ProductImage } from "@/components/product-image";
 import { SuccessPopup } from "@/components/success-popup";
-import { isCloudinaryConfigured, uploadImageToCloudinary } from "@/lib/cloudinary";
+import { isSiloConfigured, uploadImageToSilo } from "@/lib/silo";
 import { formatCurrency, formatDateTime } from "@/lib/format";
 import {
   createCategory,
@@ -80,6 +80,25 @@ export default function ProductsPage() {
   const [restockProductId, setRestockProductId] = useState<string | null>(null);
   const [restockQty, setRestockQty] = useState(1);
   const [restocking, setRestocking] = useState(false);
+  const [syncingPap, setSyncingPap] = useState(false);
+
+  const handleSyncPap = async () => {
+    setSyncingPap(true);
+    setMessage("");
+    try {
+      const res = await fetch("/api/pap", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || data.error || "Gagal sinkronisasi dengan PAP Core");
+      }
+      setMessage(data.message);
+      setSuccessPopup(data.message);
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : "Sinkronisasi PAP Core gagal.");
+    } finally {
+      setSyncingPap(false);
+    }
+  };
 
   useEffect(() => {
     const unsubscribeProducts = subscribeProducts(setProducts);
@@ -142,7 +161,7 @@ export default function ProductsPage() {
     setSavingProduct(true);
 
     try {
-      const imageUrl = selectedImageFile ? await uploadImageToCloudinary(selectedImageFile) : form.imageUrl;
+      const imageUrl = selectedImageFile ? await uploadImageToSilo(selectedImageFile) : form.imageUrl;
       const payload: ProductInput = {
         ...form,
         imageUrl,
@@ -398,7 +417,7 @@ export default function ProductsPage() {
             </p>
             <h1 className="mt-3 text-3xl font-black tracking-tight">Manajemen produk</h1>
             <p className="mt-2 text-sm text-slate-300">
-              Kelola menu, harga, stok, SKU, barcode, dan kategori yang disimpan ke Firestore.
+              Kelola menu, harga, stok, SKU, barcode, dan kategori yang disimpan ke database PostgreSQL.
             </p>
           </div>
 
@@ -476,14 +495,14 @@ export default function ProductsPage() {
                 <input
                   type="file"
                   accept="image/*"
-                  disabled={savingProduct || !isCloudinaryConfigured}
+                  disabled={savingProduct || !isSiloConfigured}
                   onChange={handleSelectImage}
                   className="hidden"
                 />
               </label>
-              {!isCloudinaryConfigured ? (
+              {!isSiloConfigured ? (
                 <p className="mt-2 text-xs font-semibold text-amber-700">
-                  Cloudinary belum aktif. Isi env Cloudinary agar gambar bisa diupload saat produk disimpan.
+                  Penyimpanan Silo belum aktif. Konfigurasi env Silo agar gambar bisa diupload.
                 </p>
               ) : null}
               {selectedImagePreview || form.imageUrl ? (
@@ -557,6 +576,20 @@ export default function ProductsPage() {
             <div className="mt-3 rounded-2xl bg-slate-50 p-3 text-xs font-semibold text-slate-500">
               Format contoh: `PRODUK | KATEGORI | SKU | STOK | HARGA | DIBUAT`.
               Kolom SKU dan DIBUAT boleh kosong.
+            </div>
+            <div className="mt-4 pt-4 border-t border-slate-100 flex flex-col gap-2">
+              <button
+                type="button"
+                onClick={handleSyncPap}
+                disabled={syncingPap}
+                className="flex items-center justify-center gap-2 rounded-2xl border border-cyan-300 bg-cyan-50 px-4 py-3 text-sm font-black text-cyan-800 hover:bg-cyan-100 transition-colors"
+              >
+                <RefreshCw size={16} className={syncingPap ? "animate-spin" : ""} />
+                {syncingPap ? "Menyinkronkan dari PAP Core..." : "Tarik Produk dari PAP Core (Stock UMKM)"}
+              </button>
+              <p className="text-center text-xs text-slate-400">
+                Terhubung ke Personal API Platform untuk integrasi inventori homelab.
+              </p>
             </div>
           </div>
 

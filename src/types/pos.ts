@@ -1,8 +1,6 @@
-import type { Timestamp } from "firebase/firestore";
-
 export type UserRole = "admin" | "cashier";
 
-export type FirestoreDate = Date | Timestamp | string | null;
+export type FirestoreDate = Date | { toDate?: () => Date; seconds?: number } | string | null;
 
 export type UserProfile = {
   id: string;

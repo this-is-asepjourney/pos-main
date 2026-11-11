@@ -14,7 +14,15 @@ export const toDate = (value: FirestoreDate): Date => {
   if (!value) return new Date();
   if (value instanceof Date) return value;
   if (typeof value === "string") return new Date(value);
-  return value.toDate();
+  if (typeof value === "object") {
+    if ("toDate" in value && typeof value.toDate === "function") {
+      return value.toDate();
+    }
+    if ("seconds" in value && typeof value.seconds === "number") {
+      return new Date(value.seconds * 1000);
+    }
+  }
+  return new Date();
 };
 
 export const formatDateTime = (value: FirestoreDate) =>

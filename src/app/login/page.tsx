@@ -48,10 +48,10 @@ export default function LoginPage() {
           </p>
         </div>
         <div className="relative grid grid-cols-3 gap-4">
-          {["Realtime", "Multi kasir", "Firestore"].map((item) => (
+          {["Realtime", "PostgreSQL", "PAP Core"].map((item) => (
             <div key={item} className="rounded-3xl bg-white/15 p-5 backdrop-blur">
               <p className="text-sm font-bold">{item}</p>
-              <p className="mt-2 text-xs text-cyan-50">Ready to scale</p>
+              <p className="mt-2 text-xs text-cyan-50">Homelab Ready</p>
             </div>
           ))}
         </div>
@@ -63,9 +63,7 @@ export default function LoginPage() {
             <p className="text-sm font-bold uppercase tracking-[0.2em] text-cyan-700">Bro-POS</p>
             <h2 className="mt-3 text-3xl font-black tracking-tight">Masuk ke sistem</h2>
             <p className="mt-2 text-sm text-slate-500">
-              {isConfigured
-                ? "Gunakan akun Firebase Auth yang sudah dibuat."
-                : "Firebase belum dikonfigurasi, tombol masuk akan membuka demo mode."}
+              Gunakan akun server POS homelab (default: admin@pos.local / kasir@pos.local).
             </p>
           </div>
 
@@ -78,9 +76,9 @@ export default function LoginPage() {
                   type="email"
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
-                  placeholder="admin@pos.test"
+                  placeholder="admin@pos.local"
                   className="w-full bg-transparent py-3 outline-none"
-                  required={isConfigured}
+                  required
                 />
               </div>
             </label>

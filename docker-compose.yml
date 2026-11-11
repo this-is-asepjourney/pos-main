@@ -1,0 +1,44 @@
+services:
+  pos-cashier:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: pos_cashier
+    restart: unless-stopped
+    ports:
+      - "${PORT:-3000}:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - HOSTNAME=0.0.0.0
+      # Homelab PostgreSQL Database
+      - DATABASE_URL=${DATABASE_URL:-postgresql://appuser:admin12345@192.168.25.101:5432/pos_db}
+      - POSTGRES_HOST=${POSTGRES_HOST:-192.168.25.101}
+      - POSTGRES_PORT=${POSTGRES_PORT:-5432}
+      - POSTGRES_DB=${POSTGRES_DB:-pos_db}
+      - POSTGRES_USER=${POSTGRES_USER:-appuser}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-admin12345}
+      # Silo / MinIO S3 Object Storage
+      - SILO_ENDPOINT=${SILO_ENDPOINT:-http://192.168.25.101:9000}
+      - SILO_ACCESS_KEY=${SILO_ACCESS_KEY:-admin}
+      - SILO_SECRET_KEY=${SILO_SECRET_KEY:-admin12345}
+      - SILO_BUCKET=${SILO_BUCKET:-homelab-storage}
+      - SILO_PUBLIC_URL=${SILO_PUBLIC_URL:-http://192.168.25.101:9000/homelab-storage}
+      # Personal API Platform (PAP Core)
+      - PAP_API_URL=${PAP_API_URL:-http://192.168.25.101:8000/api/v1}
+      - PAP_API_KEY=${PAP_API_KEY:-pap_key_pos_cashier_default_secret_key_2026}
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/init"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - pos-network
+
+networks:
+  pos-network:
+    driver: bridge
+

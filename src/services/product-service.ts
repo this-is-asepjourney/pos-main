@@ -1,161 +1,177 @@
-import {
-  addDoc,
-  collection,
-  deleteDoc,
-  doc,
-  getDocs,
-  increment,
-  onSnapshot,
-  orderBy,
-  query,
-  serverTimestamp,
-  updateDoc,
-  type Unsubscribe,
-} from "firebase/firestore";
-import { db, isFirebaseConfigured } from "@/lib/firebase";
-import { demoCategories, demoProducts } from "@/lib/demo-data";
 import type { Category, Product, ProductInput } from "@/types/pos";
+import { demoCategories, demoProducts } from "@/lib/demo-data";
 
-const productCollection = collection(db, "products");
-const categoryCollection = collection(db, "categories");
-
-export const subscribeProducts = (callback: (products: Product[]) => void): Unsubscribe => {
-  if (!isFirebaseConfigured) {
-    callback(demoProducts);
-    return () => undefined;
-  }
-
-  const productsQuery = query(productCollection, orderBy("name", "asc"));
-  return onSnapshot(
-    productsQuery,
-    (snapshot) => {
-      callback(snapshot.docs.map((document) => ({ id: document.id, ...document.data() }) as Product));
-    },
-    (error) => {
-      console.warn("Gagal memuat produk:", error.message);
-      callback([]);
-    },
-  );
-};
-
-export const subscribeCategories = (callback: (categories: Category[]) => void): Unsubscribe => {
-  if (!isFirebaseConfigured) {
-    callback(demoCategories);
-    return () => undefined;
-  }
-
-  const categoriesQuery = query(categoryCollection, orderBy("name", "asc"));
-  return onSnapshot(
-    categoriesQuery,
-    (snapshot) => {
-      callback(snapshot.docs.map((document) => ({ id: document.id, ...document.data() }) as Category));
-    },
-    (error) => {
-      console.warn("Gagal memuat kategori:", error.message);
-      callback([]);
-    },
-  );
-};
+export type Unsubscribe = () => void;
 
 export const getProducts = async (): Promise<Product[]> => {
-  if (!isFirebaseConfigured) return demoProducts;
-
-  const snapshot = await getDocs(query(productCollection, orderBy("name", "asc")));
-  return snapshot.docs.map((document) => ({ id: document.id, ...document.data() }) as Product);
+  try {
+    const res = await fetch("/api/products", { cache: "no-store" });
+    if (!res.ok) throw new Error("Gagal mengambil data produk");
+    return await res.json();
+  } catch (err) {
+    console.warn("[Product Service] Error fetching products, using demo data fallback:", err);
+    return demoProducts;
+  }
 };
 
 export const getCategories = async (): Promise<Category[]> => {
-  if (!isFirebaseConfigured) return demoCategories;
+  try {
+    const res = await fetch("/api/categories", { cache: "no-store" });
+    if (!res.ok) throw new Error("Gagal mengambil data kategori");
+    return await res.json();
+  } catch (err) {
+    console.warn("[Product Service] Error fetching categories, using demo data fallback:", err);
+    return demoCategories;
+  }
+};
 
-  const snapshot = await getDocs(query(categoryCollection, orderBy("name", "asc")));
-  return snapshot.docs.map((document) => ({ id: document.id, ...document.data() }) as Category);
+export const subscribeProducts = (callback: (products: Product[]) => void): Unsubscribe => {
+  let active = true;
+
+  const load = async () => {
+    try {
+      const prods = await getProducts();
+      if (active) callback(prods);
+    } catch {
+      if (active) callback([]);
+    }
+  };
+
+  load();
+  const intervalId = setInterval(load, 5000);
+
+  return () => {
+    active = false;
+    clearInterval(intervalId);
+  };
+};
+
+export const subscribeCategories = (callback: (categories: Category[]) => void): Unsubscribe => {
+  let active = true;
+
+  const load = async () => {
+    try {
+      const cats = await getCategories();
+      if (active) callback(cats);
+    } catch {
+      if (active) callback([]);
+    }
+  };
+
+  load();
+  const intervalId = setInterval(load, 5000);
+
+  return () => {
+    active = false;
+    clearInterval(intervalId);
+  };
 };
 
 export const createProduct = async (payload: ProductInput) => {
-  if (!isFirebaseConfigured) {
-    throw new Error("Firebase belum dikonfigurasi. Isi .env.local untuk menyimpan produk.");
+  const res = await fetch("/api/products", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => null);
+    throw new Error(errorData?.error || "Gagal menambahkan produk.");
   }
 
-  return addDoc(productCollection, {
-    ...payload,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-  });
+  return await res.json();
 };
 
 export const importProduct = async (payload: ProductInput, createdAt?: Date) => {
-  if (!isFirebaseConfigured) {
-    throw new Error("Firebase belum dikonfigurasi. Isi .env.local untuk import produk.");
-  }
-
-  return addDoc(productCollection, {
-    ...payload,
-    createdAt: createdAt ?? serverTimestamp(),
-    updatedAt: serverTimestamp(),
-  });
+  return createProduct(payload);
 };
 
 export const updateProduct = async (productId: string, payload: ProductInput) => {
-  if (!isFirebaseConfigured) {
-    throw new Error("Firebase belum dikonfigurasi. Isi .env.local untuk mengubah produk.");
+  const res = await fetch(`/api/products/${productId}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => null);
+    throw new Error(errorData?.error || "Gagal mengupdate produk.");
   }
 
-  return updateDoc(doc(db, "products", productId), {
-    ...payload,
-    updatedAt: serverTimestamp(),
-  });
+  return await res.json();
 };
 
 export const restockProduct = async (productId: string, qty: number) => {
-  if (!isFirebaseConfigured) {
-    throw new Error("Firebase belum dikonfigurasi. Isi .env.local untuk restock produk.");
-  }
-
   if (!Number.isFinite(qty) || qty <= 0) {
     throw new Error("Jumlah restock harus lebih dari 0.");
   }
 
-  return updateDoc(doc(db, "products", productId), {
-    stock: increment(Math.floor(qty)),
-    updatedAt: serverTimestamp(),
+  const res = await fetch(`/api/products/${productId}/restock`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ qty }),
   });
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => null);
+    throw new Error(errorData?.error || "Gagal restock produk.");
+  }
+
+  return await res.json();
 };
 
 export const deleteProduct = async (productId: string) => {
-  if (!isFirebaseConfigured) {
-    throw new Error("Firebase belum dikonfigurasi. Isi .env.local untuk menghapus produk.");
+  const res = await fetch(`/api/products/${productId}`, {
+    method: "DELETE",
+  });
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => null);
+    throw new Error(errorData?.error || "Gagal menghapus produk.");
   }
 
-  return deleteDoc(doc(db, "products", productId));
+  return await res.json();
 };
 
 export const createCategory = async (name: string) => {
-  if (!isFirebaseConfigured) {
-    throw new Error("Firebase belum dikonfigurasi. Isi .env.local untuk menyimpan kategori.");
+  const res = await fetch("/api/categories", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name }),
+  });
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => null);
+    throw new Error(errorData?.error || "Gagal menambahkan kategori.");
   }
 
-  return addDoc(categoryCollection, {
-    name,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-  });
+  return await res.json();
 };
 
 export const updateCategory = async (categoryId: string, name: string) => {
-  if (!isFirebaseConfigured) {
-    throw new Error("Firebase belum dikonfigurasi. Isi .env.local untuk mengubah kategori.");
+  const res = await fetch("/api/categories", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id: categoryId, name }),
+  });
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => null);
+    throw new Error(errorData?.error || "Gagal mengupdate kategori.");
   }
 
-  return updateDoc(doc(db, "categories", categoryId), {
-    name,
-    updatedAt: serverTimestamp(),
-  });
+  return await res.json();
 };
 
 export const deleteCategory = async (categoryId: string) => {
-  if (!isFirebaseConfigured) {
-    throw new Error("Firebase belum dikonfigurasi. Isi .env.local untuk menghapus kategori.");
+  const res = await fetch(`/api/categories?id=${encodeURIComponent(categoryId)}`, {
+    method: "DELETE",
+  });
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => null);
+    throw new Error(errorData?.error || "Gagal menghapus kategori.");
   }
 
-  return deleteDoc(doc(db, "categories", categoryId));
+  return await res.json();
 };

@@ -8,19 +8,17 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import {
-  onAuthStateChanged,
-  signInWithEmailAndPassword,
-  signOut,
-  type User,
-} from "firebase/auth";
-import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
-import { auth, isFirebaseConfigured } from "@/lib/firebase";
-import { db } from "@/lib/firebase";
 import type { UserRole } from "@/types/pos";
 
+export type SessionUser = {
+  uid: string;
+  id: string;
+  displayName: string;
+  email: string;
+};
+
 type AuthContextValue = {
-  user: User | null;
+  user: SessionUser | null;
   displayName: string;
   role: UserRole;
   isConfigured: boolean;
@@ -31,110 +29,117 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-const withTimeout = async <T,>(promise: Promise<T>, timeoutMs: number): Promise<T> => {
-  let timeoutId: ReturnType<typeof setTimeout>;
-
-  const timeoutPromise = new Promise<never>((_, reject) => {
-    timeoutId = setTimeout(() => reject(new Error("Firebase auth timeout.")), timeoutMs);
-  });
-
-  try {
-    return await Promise.race([promise, timeoutPromise]);
-  } finally {
-    clearTimeout(timeoutId!);
-  }
-};
-
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(isFirebaseConfigured);
+  const [user, setUser] = useState<SessionUser | null>(null);
   const [role, setRole] = useState<UserRole>("admin");
+  const [loading, setLoading] = useState(true);
+  const isConfigured = true;
 
   useEffect(() => {
-    if (!isFirebaseConfigured) {
-      return undefined;
-    }
+    let active = true;
 
-    let authResolved = false;
-    const fallbackTimer = window.setTimeout(() => {
-      if (!authResolved) {
-        setUser(null);
-        setRole("cashier");
-        setLoading(false);
-      }
-    }, 4000);
-
-    const unsubscribe = onAuthStateChanged(
-      auth,
-      async (currentUser) => {
-        authResolved = true;
-        window.clearTimeout(fallbackTimer);
-        setUser(currentUser);
-
-        if (!currentUser) {
-          setRole("cashier");
-          setLoading(false);
-          return;
-        }
-
-        try {
-          const userRef = doc(db, "users", currentUser.uid);
-          const userSnapshot = await withTimeout(getDoc(userRef), 4000);
-
-          if (!userSnapshot.exists()) {
-            // New accounts default to cashier; admin can promote from Firestore.
-            await withTimeout(
-              setDoc(userRef, {
-                name: currentUser.displayName ?? currentUser.email ?? "User",
-                email: currentUser.email ?? "",
-                role: "cashier",
-                createdAt: serverTimestamp(),
-              }),
-              4000,
-            );
-            setRole("cashier");
-          } else {
-            const userData = userSnapshot.data();
-            setRole(userData.role === "admin" ? "admin" : "cashier");
+    const checkSession = async () => {
+      try {
+        const res = await fetch("/api/auth/me", { cache: "no-store" });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.authenticated && data.user && active) {
+            setUser({
+              uid: data.user.id,
+              id: data.user.id,
+              displayName: data.user.name || data.user.email,
+              email: data.user.email,
+            });
+            setRole(data.user.role === "admin" ? "admin" : "cashier");
+            setLoading(false);
+            return;
           }
-        } catch {
-          setRole("cashier");
-        } finally {
-          setLoading(false);
         }
-      },
-      () => {
-        authResolved = true;
-        window.clearTimeout(fallbackTimer);
-        setUser(null);
-        setRole("cashier");
-        setLoading(false);
-      },
-    );
+      } catch (err) {
+        console.warn("[Auth Provider] Session check note:", err);
+      }
+
+      // Check saved localStorage fallback for quick cashier access
+      try {
+        const cached = localStorage.getItem("pos_user");
+        if (cached && active) {
+          const parsed = JSON.parse(cached);
+          setUser(parsed);
+          setRole(parsed.role === "admin" ? "admin" : "cashier");
+        }
+      } catch {
+        // Ignore JSON error
+      }
+
+      if (active) setLoading(false);
+    };
+
+    checkSession();
 
     return () => {
-      window.clearTimeout(fallbackTimer);
-      unsubscribe();
+      active = false;
     };
   }, []);
+
+  const login = async (email: string, password: string): Promise<void> => {
+    const res = await fetch("/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => null);
+      throw new Error(err?.error || "Gagal masuk. Periksa email dan password.");
+    }
+
+    const data = await res.json();
+    const sessionUser: SessionUser = {
+      uid: data.user.id,
+      id: data.user.id,
+      displayName: data.user.name || data.user.email,
+      email: data.user.email,
+    };
+
+    setUser(sessionUser);
+    setRole(data.user.role === "admin" ? "admin" : "cashier");
+
+    try {
+      localStorage.setItem(
+        "pos_user",
+        JSON.stringify({ ...sessionUser, role: data.user.role })
+      );
+    } catch {
+      // Ignore storage error
+    }
+  };
+
+  const logout = async (): Promise<void> => {
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+    } catch {
+      // Ignore
+    }
+    setUser(null);
+    setRole("cashier");
+    try {
+      localStorage.removeItem("pos_user");
+    } catch {
+      // Ignore
+    }
+  };
 
   const value = useMemo<AuthContextValue>(
     () => ({
       user,
-      displayName: user?.displayName ?? user?.email ?? "Admin Demo",
+      displayName: user?.displayName ?? user?.email ?? "Kasir",
       role,
-      isConfigured: isFirebaseConfigured,
+      isConfigured,
       loading,
-      login: async (email, password) => {
-        if (!isFirebaseConfigured) return;
-        await signInWithEmailAndPassword(auth, email, password);
-      },
-      logout: async () => {
-        if (!isFirebaseConfigured) return;
-        await signOut(auth);
-      },
+      login,
+      logout,
     }),
-    [loading, role, user],
+    [loading, role, user, isConfigured]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

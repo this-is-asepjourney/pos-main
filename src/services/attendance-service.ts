@@ -1,125 +1,136 @@
-import {
-  addDoc,
-  collection,
-  doc,
-  getDocs,
-  limit,
-  onSnapshot,
-  orderBy,
-  query,
-  serverTimestamp,
-  updateDoc,
-  where,
-  type Unsubscribe,
-} from "firebase/firestore";
-import { db, isFirebaseConfigured } from "@/lib/firebase";
 import type { ShiftAttendance, UserRole } from "@/types/pos";
 
-const attendanceCollection = collection(db, "attendance");
+export type Unsubscribe = () => void;
+
+export const getActiveShifts = async (): Promise<ShiftAttendance[]> => {
+  try {
+    const res = await fetch("/api/attendance?status=active", { cache: "no-store" });
+    if (!res.ok) return [];
+    return await res.json();
+  } catch {
+    return [];
+  }
+};
+
+export const getAttendanceHistory = async (maxItems = 100): Promise<ShiftAttendance[]> => {
+  try {
+    const res = await fetch(`/api/attendance?limit=${maxItems}`, { cache: "no-store" });
+    if (!res.ok) return [];
+    return await res.json();
+  } catch {
+    return [];
+  }
+};
 
 export const subscribeActiveShifts = (
-  callback: (shifts: ShiftAttendance[]) => void,
+  callback: (shifts: ShiftAttendance[]) => void
 ): Unsubscribe => {
-  if (!isFirebaseConfigured) {
-    callback([]);
-    return () => undefined;
-  }
+  let active = true;
 
-  const activeQuery = query(attendanceCollection, where("status", "==", "active"), limit(50));
-  return onSnapshot(
-    activeQuery,
-    (snapshot) => {
-      callback(snapshot.docs.map((document) => ({ id: document.id, ...document.data() }) as ShiftAttendance));
-    },
-    (error) => {
-      console.warn("Gagal memuat absensi aktif:", error.message);
-      callback([]);
-    },
-  );
+  const load = async () => {
+    try {
+      const data = await getActiveShifts();
+      if (active) callback(data);
+    } catch {
+      if (active) callback([]);
+    }
+  };
+
+  load();
+  const intervalId = setInterval(load, 5000);
+
+  return () => {
+    active = false;
+    clearInterval(intervalId);
+  };
 };
 
 export const subscribeMyActiveShift = (
   userId: string,
-  callback: (shift: ShiftAttendance | null) => void,
+  callback: (shift: ShiftAttendance | null) => void
 ): Unsubscribe => {
-  if (!isFirebaseConfigured || !userId) {
-    callback(null);
-    return () => undefined;
-  }
+  let active = true;
 
-  const myShiftQuery = query(
-    attendanceCollection,
-    where("userId", "==", userId),
-    where("status", "==", "active"),
-    limit(1),
-  );
+  const load = async () => {
+    if (!userId) {
+      if (active) callback(null);
+      return;
+    }
+    try {
+      const res = await fetch(`/api/attendance?userId=${encodeURIComponent(userId)}&status=active&limit=1`, {
+        cache: "no-store",
+      });
+      if (res.ok && active) {
+        const shifts = await res.json();
+        callback(shifts[0] || null);
+      }
+    } catch {
+      if (active) callback(null);
+    }
+  };
 
-  return onSnapshot(
-    myShiftQuery,
-    (snapshot) => {
-      const document = snapshot.docs[0];
-      callback(document ? ({ id: document.id, ...document.data() } as ShiftAttendance) : null);
-    },
-    (error) => {
-      console.warn("Gagal memuat shift saya:", error.message);
-      callback(null);
-    },
-  );
+  load();
+  const intervalId = setInterval(load, 5000);
+
+  return () => {
+    active = false;
+    clearInterval(intervalId);
+  };
 };
 
 export const subscribeAttendanceHistory = (
   callback: (shifts: ShiftAttendance[]) => void,
-  maxItems = 100,
+  maxItems = 100
 ): Unsubscribe => {
-  if (!isFirebaseConfigured) {
-    callback([]);
-    return () => undefined;
-  }
+  let active = true;
 
-  const historyQuery = query(attendanceCollection, orderBy("startedAt", "desc"), limit(maxItems));
-  return onSnapshot(
-    historyQuery,
-    (snapshot) => {
-      callback(snapshot.docs.map((document) => ({ id: document.id, ...document.data() }) as ShiftAttendance));
-    },
-    (error) => {
-      console.warn("Gagal memuat riwayat absensi:", error.message);
-      callback([]);
-    },
-  );
+  const load = async () => {
+    try {
+      const data = await getAttendanceHistory(maxItems);
+      if (active) callback(data);
+    } catch {
+      if (active) callback([]);
+    }
+  };
+
+  load();
+  const intervalId = setInterval(load, 5000);
+
+  return () => {
+    active = false;
+    clearInterval(intervalId);
+  };
 };
 
 export const startShift = async (userId: string, userName: string, role: UserRole) => {
-  if (!isFirebaseConfigured) return "demo-shift";
+  const res = await fetch("/api/attendance", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ userId, userName, role }),
+  });
 
-  const activeQuery = query(
-    attendanceCollection,
-    where("userId", "==", userId),
-    where("status", "==", "active"),
-    limit(1),
-  );
-  const activeSnapshot = await getDocs(activeQuery);
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => null);
+    throw new Error(errorData?.error || "Gagal memulai shift.");
+  }
 
-  if (!activeSnapshot.empty) {
+  const data = await res.json();
+  if (data.alreadyActive) {
     throw new Error("Shift kamu masih aktif. Akhiri shift sebelum mulai lagi.");
   }
 
-  const shiftRef = await addDoc(attendanceCollection, {
-    userId,
-    userName,
-    role,
-    status: "active",
-    startedAt: serverTimestamp(),
-  });
-
-  return shiftRef.id;
+  return data.id;
 };
 
 export const endShift = async (shiftId: string) => {
-  if (!isFirebaseConfigured) return;
-
-  await updateDoc(doc(db, "attendance", shiftId), {
-    status: "closed",
-    endedAt: serverTimestamp(),
+  const res = await fetch("/api/attendance", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id: shiftId }),
   });
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => null);
+    throw new Error(errorData?.error || "Gagal mengakhiri shift.");
+  }
 };
