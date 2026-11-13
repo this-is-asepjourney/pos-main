@@ -18,12 +18,6 @@ services:
       - POSTGRES_DB=${POSTGRES_DB:-pos_db}
       - POSTGRES_USER=${POSTGRES_USER:-appuser}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-admin12345}
-      # Silo / MinIO S3 Object Storage
-      - SILO_ENDPOINT=${SILO_ENDPOINT:-http://192.168.25.101:9000}
-      - SILO_ACCESS_KEY=${SILO_ACCESS_KEY:-admin}
-      - SILO_SECRET_KEY=${SILO_SECRET_KEY:-admin12345}
-      - SILO_BUCKET=${SILO_BUCKET:-homelab-storage}
-      - SILO_PUBLIC_URL=${SILO_PUBLIC_URL:-http://192.168.25.101:9000/homelab-storage}
       # Personal API Platform (PAP Core)
       - PAP_API_URL=${PAP_API_URL:-http://192.168.25.101:8000/api/v1}
       - PAP_API_KEY=${PAP_API_KEY:-pap_key_pos_cashier_default_secret_key_2026}
